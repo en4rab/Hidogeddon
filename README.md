@@ -1,6 +1,6 @@
 # Hidogeddon
 
-Welcome to the **Hidogeddon** repository. This project is a specialized firmware implementation designed for interacting with **HID proximity cards and readers** but will work with any readers that provides wiegand output, similar to the Paxtogeddon reader but tailored for wiegand output.
+Welcome to the **Hidogeddon** repository. This project is a specialised firmware implementation designed for interacting with **HID proximity cards and readers** but will work with any readers that provides wiegand output, similar to the Paxtogeddon reader but tailored for wiegand output.
 
 ---
 
