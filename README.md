@@ -1,6 +1,6 @@
 # Hidogeddon
 
-Welcome to the **Hidogeddon** repository. This project is a specialized firmware implementation designed for interacting with **HID proximity cards and readers**, mirroring the functionality of the well-known Paxtogeddon reader but tailored for the HID ecosystem.
+Welcome to the **Hidogeddon** repository. This project is a specialized firmware implementation designed for interacting with **HID proximity cards and readers** but will work with any readers that provides wiegand output, similar to the Paxtogeddon reader but tailored for wiegand output.
 
 ---
 
@@ -13,12 +13,12 @@ I am simply hosting this project on my GitHub to ensure the code has a permanent
 
 ## Project Overview
 
-Hidogeddon is designed to run on the **same hardware as the Paxtogeddon reader**. While Paxtogeddon focuses on Paxton-based systems, this firmware adapts that hardware to interface with HID protocols.
+Hidogeddon is designed to run on the **same hardware as the Paxtogeddon reader**. While Paxtogeddon focuses on Paxton-based systems, this firmware adapts that hardware to interface with wiegand output readers.
 
 ### Key Features
 * **Hardware Compatibility:** Fully compatible with existing Paxtogeddon hardware setups.
-* **HID Support:** Decodes a wide variet of HID data formats.
-* **Seamless Port:** Provides the same user experience and utility as Paxtogeddon, but for a different credential provider.
+* **HID Support:** Decodes a wide variety of HID data formats.
+* **Seamless Port:** Provides the same user experience and utility as Paxtogeddon, but for readers that provide wiegand output.
 
 ---
 
