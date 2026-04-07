@@ -242,9 +242,9 @@ static void ServerTasks(void* p) {
     request->redirect(baseURL);
   });
 
-  //Trigger BLE Scan (via VibrateBLE firmware on another ESP32)
+  //Trigger BLE vibration on paired FitPro watch
   webServer.on("/triggerBleScan", HTTP_GET, [](AsyncWebServerRequest* request) {
-    hrSettings::lastCardData = "Trigger BLE Scan command sent";
+    hrSettings::lastCardData = "BLE vibrate triggered";
     hrUtil::RequestTriggerBLEScan();
     request->redirect(baseURL);
   });
@@ -513,6 +513,21 @@ static void ServerTasks(void* p) {
             AsyncWebParameter* p12 = request->getParam("captureunknownbitlengths", true);
             if (p12->value() == "on") {
               hrSettings::captureUnknownBitLengths = true;
+            }
+          }
+
+          hrSettings::bleEnabled = false;
+          if (request->hasParam("bleenabled", true)) {
+            AsyncWebParameter* pBleEn = request->getParam("bleenabled", true);
+            if (pBleEn->value() == "on") {
+              hrSettings::bleEnabled = true;
+            }
+          }
+
+          if (request->hasParam("blerscan", true)) {
+            AsyncWebParameter* pBleRscan = request->getParam("blerscan", true);
+            if (pBleRscan->value() == "on") {
+              hrSettings::bleMAC = "";
             }
           }
 

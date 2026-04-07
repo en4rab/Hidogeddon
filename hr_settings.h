@@ -52,6 +52,13 @@ extern String FC_DEFAULT;
 extern String FC_CONNECT_TO_AP;
 extern String FC_SHOW_AP_INFO;
 
+//BLE Settings
+const extern String bleManufacturerTarget;
+extern bool bleEnabled;
+extern String bleMAC;
+extern bool bleScanMode;
+extern volatile bool bleTriggerPending;
+
 //General
 extern bool oneShotConnectToAP;
 extern String lastCardData;

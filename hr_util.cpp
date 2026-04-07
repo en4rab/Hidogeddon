@@ -4,7 +4,6 @@ namespace hrUtil {
 
 uint32_t systemRebootDelay = 5000;
 bool systemReboot = false;
-bool systemBLEScan = false;
 Preferences preferences;
 Adafruit_SSD1306 display(hrSettings::SCREEN_WIDTH, hrSettings::SCREEN_HEIGHT, &Wire, hrSettings::OLED_RESET);
 
@@ -36,8 +35,14 @@ void SettingsInit(void) {
     hrSettings::wiegandInterleave = preferences.getInt("W_INTER", hrSettings::wiegandInterleave);
     hrSettings::wiegandLearnMode = preferences.getBool("W_LMODE", hrSettings::wiegandLearnMode);
     hrSettings::captureUnknownBitLengths = preferences.getBool("CAP_UBL", hrSettings::captureUnknownBitLengths);
+    hrSettings::bleEnabled = preferences.getBool("BLE_EN", hrSettings::bleEnabled);
+    hrSettings::bleMAC = preferences.getString("BLE_MAC", hrSettings::bleMAC);
   }
   preferences.end();
+
+  if (hrSettings::bleEnabled && hrSettings::bleMAC == "") {
+    hrSettings::bleScanMode = true;
+  }
 
   preferences.begin("hrSpecCards", false);
   if (preferences.getBool("hrs_ok", false)) {
@@ -132,6 +137,8 @@ void SaveSettings(void) {
   preferences.putInt("W_INTER", hrSettings::wiegandInterleave);
   preferences.putBool("W_LMODE", hrSettings::wiegandLearnMode);
   preferences.putBool("CAP_UBL", hrSettings::captureUnknownBitLengths);
+  preferences.putBool("BLE_EN", hrSettings::bleEnabled);
+  preferences.putString("BLE_MAC", hrSettings::bleMAC);
   preferences.putBool("hrs_ok", true);
   preferences.end();
 }
@@ -252,36 +259,11 @@ void CheckReboot(void) {
 }
 
 void RequestTriggerBLEScan(void) {
-  if (hrSettings::EXT_PIN == 255) { return; }
-  systemBLEScan = true;
+  hrSettings::bleTriggerPending = true;
 }
 
 void CheckTriggerBLEScan(void) {
-  if (!systemBLEScan) { return; }
-  if (hrSettings::EXT_PIN == 255) { return; }
-  systemBLEScan = false;
-  digitalWrite(hrSettings::GREEN_LED_PIN, 0);
-  digitalWrite(hrSettings::YELLOW_LED_PIN, 0);
-  digitalWrite(hrSettings::RED_LED_PIN, 0);
-  digitalWrite(hrSettings::EXT_PIN, 1);
-
-  for (int i = 0; i < 12; i++) {
-    delay(500);
-    digitalWrite(hrSettings::GREEN_LED_PIN, 1);
-    delay(500);
-    digitalWrite(hrSettings::YELLOW_LED_PIN, 1);
-    delay(500);
-    digitalWrite(hrSettings::RED_LED_PIN, 1);
-    delay(500);
-    digitalWrite(hrSettings::GREEN_LED_PIN, 0);
-    digitalWrite(hrSettings::YELLOW_LED_PIN, 0);
-    digitalWrite(hrSettings::RED_LED_PIN, 0);
-  }
-
-  digitalWrite(hrSettings::GREEN_LED_PIN, 1);
-  digitalWrite(hrSettings::YELLOW_LED_PIN, 1);
-  digitalWrite(hrSettings::RED_LED_PIN, 1);
-  digitalWrite(hrSettings::EXT_PIN, 0);
+  // Handled by BLE task monitoring bleTriggerPending; no-op here
 }
 
 void LedControl(bool greenLed, bool yellowLed, bool redLed, bool extOut) {

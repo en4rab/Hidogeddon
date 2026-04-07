@@ -76,6 +76,14 @@ String FC_DEFAULT = "n";        //Function Card - Defaults the settings and Rebo
 String FC_CONNECT_TO_AP = "n";  //Function Card - Reboots the ESP32 and connects to an access point rather than creating one, if SSID and PW are set
 String FC_SHOW_AP_INFO = "n";   //Function Card - Shows AP info on the OLED if the OLED is set as connected
 
+//BLE Settings
+//DO NOT CHANGE THESE
+const String bleManufacturerTarget = "716";
+bool bleEnabled = false;
+String bleMAC = "";
+bool bleScanMode = false;
+volatile bool bleTriggerPending = false;
+
 //General
 //DO NOT CHANGE THESE
 bool oneShotConnectToAP = false;

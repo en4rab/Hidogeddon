@@ -83,7 +83,7 @@ String Menu(bool autoRefresh) {
     //html += "<a href=\"/exportLog?d=0\">View Raw Log</a>";
     html += "<a href=\"/confirmClearLog\">Clear Log</a><hr>";
     html += "<a href=\"/confirmRemoveSpecialCards\">Remove Special Cards</a><hr>";
-    html += hrSettings::EXT_PIN == 255 ? "" : "<a href=\"/triggerBleScan\">Trigger BLE Scan</a><hr>";
+    html += hrSettings::bleEnabled ? "<a href=\"/triggerBleScan\">Trigger BLE Vibrate</a><hr>" : "";
     html += "<a href=\"/confirmReboot\">Reboot</a><hr>";
     html += "<a href=\"/viewSettings\">Settings</a>";
     html += "</div></div>";
@@ -408,6 +408,17 @@ String ViewSettings(String message) {
   html += "<div class=\"settingsName\">HTML Auto Refresh (seconds)</div><input type=\"number\" min=\"1\" max=\"60\" id=\"refreshseconds\" name=\"refreshseconds\" value=\"" + hrSettings::webPollSeconds + "\">";
   html += "<div class=\"settingsName\">Allow Captive Portal:<input type=\"checkbox\" id=\"allowcaptiveportal\" name=\"allowcaptiveportal\" " + allowCaptivePortal + "></div>";
   html += "<div class=\"settingsName\">OLED Connected:<input type=\"checkbox\" id=\"oledconnected\" name=\"oledconnected\" " + oledConnected + "></div>";
+  html += "</div></td></tr></table>";
+
+  //BLE Settings
+  String bleEnabledCheck = hrSettings::bleEnabled == true ? "checked" : "";
+  String blePaired = hrSettings::bleMAC == "" ? "None" : hrSettings::bleMAC;
+  html += "<table width=\"100%\" border=\"0\" cellspacing=\"5\" cellpadding=\"0\"><tr>";
+  html += "<td align=\"left\" valign=\"top\"><div class=\"infoPanel\">";
+  html += "<div class=\"settingsHeader\">BLE Notification (FitPro M4/M5/M6)</div>";
+  html += "<div class=\"settingsName\">BLE Enabled:<input type=\"checkbox\" id=\"bleenabled\" name=\"bleenabled\" " + bleEnabledCheck + "></div>";
+  html += "<div class=\"settingsName\">Paired device: " + blePaired + "</div>";
+  html += "<div class=\"settingsName\">Re-scan (clears pairing on next boot):<input type=\"checkbox\" id=\"blerscan\" name=\"blerscan\"></div>";
   html += "</div></td></tr></table></form>";
   return html;
 }

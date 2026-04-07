@@ -46,6 +46,7 @@ AsyncTCP by dvarrel v1.1.4
 Adafruit SSD1306 by Adafruit v2.5.14
 Adafruit GFX Library by Adafruit v1.12.1
 Adafruit BusIO by Adafruit v1.17.1
+Nimble-Arduino by h2zero v2.5.0
 
 */
 
@@ -55,6 +56,22 @@ Adafruit BusIO by Adafruit v1.17.1
 #include "hr_server.h"
 #include "hr_html.h"
 #include "hr_cardreader.h"
+#include "hr_ble.h"
+
+void BLETask(void* p) {
+  while (true) {
+    if (hrSettings::bleScanMode) {
+      hrBLE::ScanDevices();
+    } else {
+      hrBLE::MaintainConnection();
+    }
+    if (hrSettings::bleTriggerPending) {
+      hrSettings::bleTriggerPending = false;
+      hrBLE::TriggerVibrate();
+    }
+    vTaskDelay(pdMS_TO_TICKS(10));
+  }
+}
 
 void setup() {
   hrUtil::SettingsInit();
@@ -63,6 +80,10 @@ void setup() {
   hrUtil::SPIFFSInit();
   hrCardReader::CardReaderInit();
   hrServer::ServerInit();
+  if (hrSettings::bleEnabled) {
+    hrBLE::FitProM4Init();
+    xTaskCreate(BLETask, "BLE", 4096, NULL, 1, NULL);
+  }
 }
 
 void loop() {
