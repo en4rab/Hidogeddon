@@ -1,16 +1,15 @@
 # BLE Integration Report: Merging VibrateBLE into HidogeddonReaderV1
 
 **Date:** 2026-04-07  
-**Target Hardware:** ESP32-C3 Super Mini  
-**Author Analysis:** A hungry ghost trapped in a jar
+**Target Hardware:** ESP32-C3 Super Mini
 
 ---
 
 ## 1. Executive Summary
 
-The current architecture uses two separate ESP32 boards: the main HidogeddonReaderV1 (ESP32-C3 Super Mini) and a secondary VibrateBLE board (FireBeetle 2 ESP32-E) that communicates with a FitPro smartwatch. The two boards communicate via a physical GPIO wire — EXT_PIN (GPIO 5) on the main board pulses high to trigger a BLE scan/vibration on the secondary board.
+The original architecture used two separate ESP32 boards: the main HidogeddonReaderV1 (ESP32-C3 Super Mini) and a secondary VibrateBLE board (FireBeetle 2 ESP32-E) that communicated with a FitPro smartwatch. The two boards communicated via a physical GPIO wire — EXT_PIN (GPIO 5) on the main board pulsed high to trigger a BLE scan/vibration on the secondary board.
 
-The ESP32-C3 has **built-in BLE 5.0 hardware**, meaning the secondary board is entirely redundant. This report describes how to consolidate both firmware images into a single binary that runs on the ESP32-C3 Super Mini, while keeping total flash and RAM usage within the hardware limits.
+The ESP32-C3 has **built-in BLE 5.0 hardware**, making the secondary board redundant. This document describes the integration that was carried out, including the issues encountered during testing and the fixes applied to resolve them.
 
 ---
 
@@ -18,258 +17,238 @@ The ESP32-C3 has **built-in BLE 5.0 hardware**, meaning the secondary board is e
 
 | Resource | ESP32-C3 Super Mini | Notes |
 |---|---|---|
-| Flash | 4MB | Default partition scheme; sufficient |
-| SRAM | 400KB | WiFi + BLE coexistence is tight but feasible |
+| Flash | 4MB | Default partition scheme |
+| SRAM | 400KB | WiFi + BLE coexistence is tight — see section 6 |
 | CPU | Single-core RISC-V @ 160MHz | No dual-core; task scheduling matters |
-| BLE | BLE 5.0 (built-in) | Same RF as WiFi; time-multiplexed |
+| BLE | BLE 5.0 (built-in) | Shares RF with WiFi; time-multiplexed |
 | WiFi | 2.4GHz 802.11 b/g/n | Already in use |
 
-**Coexistence note:** The ESP32-C3 shares a single 2.4GHz RF for both WiFi and BLE. Espressif's SDK includes a hardware coexistence scheduler (`CONFIG_ESP_COEX_SW_COEXIST_ENABLE`) that time-multiplexes the two radios. This is enabled by default in Arduino ESP32 builds and is transparent to application code. Latency on both WiFi and BLE increases slightly but both remain functional.
+**Coexistence:** The ESP32-C3 shares a single 2.4GHz RF for both WiFi and BLE. Espressif's SDK coexistence scheduler time-multiplexes the two radios automatically. Scan duty cycle and connection attempt frequency must be managed carefully by the application to avoid starving WiFi — see section 6.
 
 ---
 
-## 3. Current Architecture
+## 3. Files Changed
 
-```
-[Main ESP32-C3]                         [Secondary ESP32-E]
-  Wiegand Reader                          BLE Client
-  Web Server                              FitPro Watchband
-  OLED Display                            
-  GPIO 5 (EXT_PIN) ──── wire ──────────▶  GPIO 17 (trigger input)
-```
+### New files added to root of project
 
-The `/triggerBleScan` web route and special function cards pulse GPIO 5 high for 6 seconds. The secondary board polls GPIO 17 and, when it goes high, sends a BLE vibration command to the FitPro watch.
+| File | Purpose |
+|---|---|
+| `hr_ble.h` | BLE namespace header |
+| `hr_ble.cpp` | BLE client implementation (ported from `VibrateBLE/hr_ble.cpp`) |
+
+### Modified files
+
+| File | Changes |
+|---|---|
+| `hr_settings.h` | Added BLE field declarations |
+| `hr_settings.cpp` | Added BLE field defaults; `LOGO_HTML` changed from `const String` to `const char[]`; logo image changed from JPEG to GIF to reduce size |
+| `hr_util.cpp` | `SettingsInit` loads/saves BLE settings; `RequestTriggerBLEScan` sets flag instead of pulsing GPIO |
+| `hr_server.cpp` | `/triggerBleScan` route updated; `/saveSettings` handles BLE checkboxes; all HTML responses converted to `AsyncResponseStream` |
+| `hr_html.cpp` | Menu BLE link condition updated; BLE section added to Settings page |
+| `HidogeddonReaderV1.ino` | Added `hr_ble.h` include; added `BLETask`; conditional BLE init in `setup()` |
 
 ---
 
-## 4. What the VibrateBLE Firmware Does
+## 4. Implementation Detail
 
-Reading `VibrateBLE/hr_ble.cpp` and `VibrateBLE/VibrateBLE.ino`, the BLE logic is compact and straightforward:
+### 4.1 hr_ble.h / hr_ble.cpp
 
-### 4.1 BLE Scan Phase
-- Uses **NimBLE-Arduino** (not the heavier standard Arduino BLE stack)
-- Scans for BLE advertisements containing manufacturer name `"716"` (FitPro identifier)
-- On first discovery, saves the device MAC address to NVS preferences under namespace `"hrSettings"` key `"bleMac"`
-- Exits scan mode and enters connection mode
+Ported from `VibrateBLE/hr_ble.cpp` with the following changes:
 
-### 4.2 BLE Connection Phase
-- Connects to the saved MAC using `NimBLEClient`
-- Accesses Nordic UART Service UUID `6e400001-b5a3-f393-e0a9-e50e24dcca9d`
-- Writes to TX characteristic `6e400002-b5a3-f393-e0a9-e50e24dcca9d`
+- `InputTriggerHandler()` (GPIO 17 polling) removed — trigger now comes from the `bleTriggerPending` flag set by the web server route
+- `StatusLED()` calls removed — the main project has its own LED control
+- New public function `TriggerVibrate()` replaces the private `Vibrate()` static
+- BLE MAC stored in the existing `"hrSettings"` NVS namespace rather than a separate one
 
-### 4.3 Vibration Commands
+**Vibration commands (unchanged from VibrateBLE):**
 ```cpp
-// Vibrate command (9 bytes)
 uint8_t vibrateCmd[9] = { 205, 0, 6, 18, 1, 11, 0, 1, 1 };
-
-// Stop command (8 bytes)
-uint8_t stopCmd[8] = { 220, 0, 5, 21, 1, 0, 20, 1 };
+uint8_t stopCmd[8]    = { 220, 0, 5, 21, 1, 0, 20, 1 };
 ```
 
-### 4.4 Trigger Input
-- Polls GPIO 17 every 10ms
-- Short press: Send vibrate → delay 500ms → send stop
-- Hold >4 seconds (400 × 10ms): Clear saved MAC and reboot (re-scan)
+**Target device:** FitPro M4/M5/M6 — identified by BLE advertisement name `"716"`  
+**Service UUID:** `6e400001-b5a3-f393-e0a9-e50e24dcca9d` (Nordic UART)  
+**TX Characteristic:** `6e400002-b5a3-f393-e0a9-e50e24dcca9d`
 
-### 4.5 Settings Stored
-- `bleMac` (String): MAC address of paired FitPro
-- `bleScanMode` (bool): Whether currently scanning
+### 4.2 hr_settings.h / hr_settings.cpp
+
+New fields added to the `hrSettings` namespace:
+
+```cpp
+const String bleManufacturerTarget = "716"; // BLE advertisement name to scan for
+bool         bleEnabled            = false;  // Master on/off; gates NimBLE init
+String       bleMAC                = "";     // Saved MAC of paired FitPro
+bool         bleScanMode           = false;  // true when no MAC saved yet
+volatile bool bleTriggerPending    = false;  // Inter-task vibrate trigger flag
+```
+
+`bleEnabled` defaults to `false` — NimBLE is never initialised unless the user explicitly enables BLE in the Settings page. This is important: NimBLE consumes ~50-60KB of heap on init; leaving it disabled when no watch is paired avoids this entirely.
+
+`LOGO_HTML` was changed from `const String` to `const char[]`. A `const String` copies its entire contents from flash into heap at boot. A `const char[]` remains in flash (DROM) and is read directly from there — zero heap cost. The logo image was also changed from JPEG to GIF, reducing its base64 size.
+
+### 4.3 hr_util.cpp
+
+`SettingsInit()` — added load of `BLE_EN` and `BLE_MAC` from NVS. Sets `bleScanMode = true` if BLE is enabled but no MAC is saved yet.
+
+`SaveSettings()` — added save of `BLE_EN` and `BLE_MAC` to NVS.
+
+`RequestTriggerBLEScan()` — replaced the 24-second blocking GPIO pulse loop with a single flag set:
+```cpp
+hrSettings::bleTriggerPending = true;
+```
+
+`CheckTriggerBLEScan()` — now a no-op; the BLE task monitors `bleTriggerPending` directly.
+
+### 4.4 hr_server.cpp
+
+`/triggerBleScan` route — comment updated to reflect it now triggers the integrated BLE stack rather than an external board.
+
+`/saveSettings` POST handler — added handling for two new form parameters:
+- `bleenabled` (checkbox) — sets `hrSettings::bleEnabled`
+- `blerscan` (checkbox) — clears `hrSettings::bleMAC` to force re-pairing on next boot
+
+**All HTML-sending routes converted from `request->send(200, "text/html", html)` to `AsyncResponseStream`** — see section 6.2 for why this was necessary.
+
+### 4.5 hr_html.cpp
+
+`Menu()` — BLE trigger link condition changed from `EXT_PIN != 255` to `bleEnabled`:
+```cpp
+html += hrSettings::bleEnabled ? "<a href=\"/triggerBleScan\">Trigger BLE Vibrate</a><hr>" : "";
+```
+
+`ViewSettings()` — new BLE section added at the bottom of the settings form:
+- **BLE Enabled** checkbox
+- Paired device MAC display (shows `"None"` if not yet paired)
+- **Re-scan** checkbox (clears MAC on save, forces scan on next boot)
+
+### 4.6 HidogeddonReaderV1.ino
+
+Added `#include "hr_ble.h"`.
+
+Added `BLETask` FreeRTOS task. Key design points:
+- **8-second startup delay** before first BLE operation, allowing the WiFi AP, DNS server and web server to be fully running before BLE uses the radio
+- `FitProM4Init()` called inside the task after the delay, not in `setup()` — this defers the ~50-60KB NimBLE heap allocation until after the web server has already served its first requests
+- Task monitors `bleTriggerPending` flag and calls `TriggerVibrate()` when set
+
+```cpp
+void BLETask(void* p) {
+  vTaskDelay(pdMS_TO_TICKS(8000));  // wait for WiFi AP + web server
+  hrBLE::FitProM4Init();            // allocate NimBLE heap after first pages served
+  while (true) {
+    if (hrSettings::bleScanMode) {
+      hrBLE::ScanDevices();
+    } else {
+      hrBLE::MaintainConnection();
+    }
+    if (hrSettings::bleTriggerPending) {
+      hrSettings::bleTriggerPending = false;
+      hrBLE::TriggerVibrate();
+    }
+    vTaskDelay(pdMS_TO_TICKS(10));
+  }
+}
+```
+
+`setup()` — `xTaskCreate(BLETask, ...)` called only when `bleEnabled` is true. `FitProM4Init()` is no longer called from `setup()`.
 
 ---
 
-## 5. Integration Plan
+## 5. GPIO Changes
 
-### 5.1 Library Change
+| GPIO | Before integration | After integration |
+|---|---|---|
+| GPIO 5 (EXT_PIN) | Pulsed high for 24s to signal secondary board | No longer used for BLE; remains available |
+| GPIO 17 (secondary board) | Trigger input from main board | Eliminated — secondary board removed |
 
-The secondary board uses **NimBLE-Arduino**. This is the correct library to use for the integrated build — it is significantly smaller than the ESP32 Arduino standard BLE library:
+---
 
-| Library | Flash overhead | RAM overhead |
+## 6. Issues Encountered During Testing and Fixes Applied
+
+### 6.1 Captive Portal Unreachable After Enabling BLE
+
+**Symptom:** After enabling BLE in Settings and rebooting, connecting devices could no longer reach the captive portal page — the connection would time out.
+
+**Root cause:** Two problems combined:
+
+1. `bleScanMode` was `true` on first boot (no MAC saved yet). `ScanDevices()` was called immediately and ran with a scan window of `99ms` out of every `100ms` interval — effectively 99% BLE radio duty cycle. This starved the WiFi AP of airtime, causing DNS responses and HTTP connections to time out.
+
+2. When no device was found, `ScanDevices()` returned and the task looped back after only a 10ms `vTaskDelay`, immediately starting another 5-second scan. This continued indefinitely with no pause.
+
+**Fix applied in `hr_ble.cpp`:**
+- Scan window reduced from `99ms` to `50ms` (50% duty cycle), leaving WiFi adequate airtime
+- Added a `vTaskDelay(30000ms)` backoff after a failed scan before retrying
+- Added a `vTaskDelay(30000ms)` backoff in `MaintainConnection()` after a failed connection attempt
+- Connection timeout reduced from 10 seconds to 5 seconds
+
+```cpp
+pBLEScan->setInterval(100);
+pBLEScan->setWindow(50);   // was 99 — reduced to 50% duty cycle
+...
+} else {
+  vTaskDelay(pdMS_TO_TICKS(30000));  // back off 30s before next scan
+}
+```
+
+**Fix applied in `HidogeddonReaderV1.ino`:**
+- Added 8-second startup delay in `BLETask` before the first BLE operation, ensuring the AP and DNS server are fully running before BLE touches the radio
+
+### 6.2 Blank Page After BLE Enabled
+
+**Symptom:** After fixing the captive portal timeout, the page loaded but was completely blank — no HTML content rendered.
+
+**Root cause:** Heap exhaustion. `BLEDevice::init()` (called from `FitProM4Init()`) allocates the entire NimBLE host stack — approximately 50-60KB of heap — in a single synchronous call. After this allocation, the heap was sufficiently fragmented that the `String` concatenation chain in `hr_html.cpp`'s `Header()` function could not obtain a large enough contiguous block. Arduino `String` silently returns an empty string on allocation failure, so every page came back blank.
+
+The `Header()` function alone builds ~3KB of HTML including a ~6KB base64-encoded inline logo image, peaking at ~9KB in one string before any other section was appended. The full home page string reached ~10-12KB.
+
+**Fixes applied:**
+
+**`hr_settings.cpp` — `LOGO_HTML` type change:**  
+Changed from `const String` (copies entire ~6KB logo into heap at boot) to `const char[]` (stays in flash, zero heap cost). The logo image was also changed from JPEG to GIF, reducing its base64-encoded size.
+
+**`HidogeddonReaderV1.ino` — deferred `FitProM4Init()`:**  
+Moved `FitProM4Init()` from `setup()` into `BLETask`, after the 8-second delay. This means NimBLE's ~50-60KB heap allocation happens only after the web server has already served its first requests, rather than before any page is ever loaded.
+
+**`hr_server.cpp` — `AsyncResponseStream` for all HTML routes:**  
+All 8 routes that previously built a complete page `String` and sent it with `request->send(200, "text/html", html)` were rewritten to use `AsyncResponseStream`. Each section is printed to the stream individually:
+
+```cpp
+// Before — entire page in one String, peaks at ~10KB heap
+String html = hrHTML::Header(autoRefresh, requestedPage);
+html += hrHTML::Menu(autoRefresh);
+html += hrHTML::CardData(...);
+html += hrHTML::Footer();
+request->send(200, "text/html", html);
+
+// After — each section allocated, printed, and freed individually
+AsyncResponseStream *response = request->beginResponseStream("text/html");
+response->print(hrHTML::Header(autoRefresh, requestedPage));
+response->print(hrHTML::Menu(autoRefresh));
+response->print(hrHTML::CardData(...));
+response->print(hrHTML::Footer());
+request->send(response);
+```
+
+`AsyncResponseStream` buffers output in 1460-byte TCP chunks and flushes to the network as each chunk fills. Peak heap at any moment is the size of the **largest single section** (~3KB) rather than the entire page (~10KB).
+
+---
+
+## 7. First-Time Setup Instructions
+
+1. Flash the firmware to the ESP32-C3 Super Mini
+2. Connect to the `Hidogeddon` WiFi AP (password: `13371337`)
+3. Navigate to `http://192.168.3.10` → **Options → Settings**
+4. Tick **BLE Enabled**, leave **Re-scan** unticked, click **Save**
+5. The device reboots; after ~8 seconds it begins scanning for a FitPro M4/M5/M6 watch
+6. Once the watch is found its MAC is saved to NVS — subsequent boots connect directly without scanning
+7. To pair a different watch: go to Settings, tick **Re-scan**, click **Save**, reboot
+
+---
+
+## 8. Library Required
+
+**NimBLE-Arduino by h2zero v2.5.0** — must be installed via Arduino Library Manager or added to the `lib/` directory. The standard ESP32 Arduino BLE library must **not** be used; it is approximately 5× larger in flash and RAM footprint.
+
+| Library | Flash | RAM |
 |---|---|---|
 | ESP32 Arduino BLE (standard) | ~500KB | ~60KB |
-| NimBLE-Arduino | ~100KB | ~25KB |
-
-NimBLE-Arduino must be added to the main project. It is available in the Arduino Library Manager. The ESP32-C3 is fully supported.
-
-**Action:** Add `NimBLE-Arduino` to the project's `lib/` directory (alongside the existing Adafruit and AsyncTCP libraries).
-
----
-
-### 5.2 Files to Add/Modify
-
-#### New file: `hr_ble.h` / `hr_ble.cpp` (ported from `VibrateBLE/`)
-
-The BLE logic from `VibrateBLE/hr_ble.cpp` can be ported directly into the main project. The key changes required are:
-
-1. **Remove GPIO trigger polling** — the trigger will come from an internal function call, not a physical pin. The `hrBLE::InputTriggerHandler()` function that watches GPIO 17 is replaced by a direct public function `hrBLE::TriggerVibrate()`.
-
-2. **Remove LED feedback tied to GPIO 17 logic** — the main project already has its own LED control via `hrUtil`.
-
-3. **Namespace the BLE MAC setting into the existing preferences namespace** — the main project already uses `"hrSettings"` for NVS. The BLE MAC key `"bleMac"` can live in the same namespace without conflict.
-
-4. **Run BLE in a FreeRTOS task** — the main project already pins the web server to Core 0 using `xTaskCreatePinnedToCore`. Since the ESP32-C3 is single-core, tasks are cooperative/preemptive via the FreeRTOS scheduler. The BLE task should be created similarly, running at a lower priority than the web server task.
-
-**Suggested BLE task structure:**
-```
-Task: BLETask (stack: 4096 bytes, priority: 1)
-  - Runs hrBLE::MaintainConnection() in a loop
-  - Monitors a shared volatile flag: hrSettings::bleTriggerPending
-  - When flag is set: calls vibrate sequence, clears flag
-```
-
-#### Modifications to `hr_settings.h` / `hr_settings.cpp`
-
-Add the following fields to the settings struct/namespace:
-
-```
-bool    bleEnabled       — master on/off for BLE feature (default: false, saves RAM if unused)
-bool    bleScanMode      — currently scanning for device
-String  bleMac           — saved MAC of paired FitPro
-volatile bool bleTriggerPending  — inter-task flag set when vibration is requested
-```
-
-The `bleEnabled` flag is important: if the user has no FitPro watch, BLE can be disabled entirely via the web UI settings page, preventing the NimBLE stack from initialising and saving ~25KB RAM.
-
-#### Modifications to `hr_util.cpp`
-
-The `CheckTriggerBLEScan()` function currently pulses GPIO 5 (EXT_PIN) high to trigger the external board. This function body should be replaced with:
-
-```
-if (hrSettings::bleTriggerPending == false) {
-    hrSettings::bleTriggerPending = true;   // signal BLE task
-}
-```
-
-GPIO 5 (EXT_PIN) is then freed. It can remain defined in hr_settings.h as unused (value 255, matching the existing convention) or repurposed.
-
-#### Modifications to `hr_server.cpp`
-
-The `/triggerBleScan` route handler currently pulses EXT_PIN via `hrUtil`. After integration, it should instead set `hrSettings::bleTriggerPending = true` directly, with no GPIO interaction.
-
-#### Modifications to `HidogeddonReaderV1.ino`
-
-In `setup()`, after the existing initialisations, add:
-
-```
-if (hrSettings::bleEnabled) {
-    hrBLE::FitProM4Init();    // initialise NimBLE stack
-    xTaskCreate(BLETask, "BLE", 4096, NULL, 1, NULL);
-}
-```
-
-In `loop()`, the `CheckTriggerBLEScan()` call remains but its implementation changes as described above.
-
----
-
-### 5.3 Settings Page Addition
-
-The web UI settings page (`hr_html.cpp`, the `BuildSettingsPage()` function) should gain two new fields:
-
-- **BLE Enabled** (checkbox): Enables/disables the entire BLE subsystem. When unchecked, `hrBLE::FitProM4Init()` is never called and NimBLE does not load.
-- **BLE Re-Scan** (button or checkbox): Clears the saved MAC and sets `bleScanMode = true` on next boot, causing the device to scan for a new FitPro. This replaces the 4-second hold behaviour on the secondary board's trigger pin.
-
----
-
-### 5.4 GPIO Changes Summary
-
-| GPIO | Before | After |
-|---|---|---|
-| GPIO 5 (EXT_PIN) | Pulses high to signal secondary board | No longer needed; set to 255 (unused) |
-| GPIO 17 (secondary board) | Trigger input from main board | Eliminated (secondary board removed) |
-
-All other GPIO assignments are unchanged.
-
----
-
-## 6. Memory Budget Estimate
-
-| Component | Flash (approx.) | RAM (approx.) |
-|---|---|---|
-| Main firmware (current) | ~650KB | ~120KB |
-| Adafruit OLED + GFX | ~70KB | ~15KB |
-| ESPAsyncWebSrv + AsyncTCP | ~80KB | ~30KB |
-| SPIFFS | ~20KB | ~5KB |
-| NimBLE-Arduino (added) | ~100KB | ~25KB |
-| **Total estimated** | **~920KB** | **~195KB** |
-| ESP32-C3 available | 4096KB (flash) | 400KB (SRAM) |
-| **Headroom** | **~3176KB flash** | **~205KB RAM** |
-
-These are conservative estimates. The integrated binary should fit comfortably within flash. RAM is the tighter constraint but remains well within limits, especially if `bleEnabled = false` prevents NimBLE from loading when not needed.
-
----
-
-## 7. BLE + WiFi Coexistence Considerations
-
-- The ESP32-C3 RF coexistence is handled by the SDK and requires no application-level changes.
-- BLE scanning is the most RF-intensive BLE operation. Once the FitPro MAC is saved (first boot), scanning is not performed on subsequent boots — the device connects directly. This minimises RF contention.
-- The BLE connection is maintained at low duty cycle (the FitPro sets its own connection interval). WiFi throughput for the web UI is largely unaffected during an established BLE connection.
-- If scan mode must be active at the same time as the web server, expect slightly increased HTTP response latency (~100ms). This is acceptable for the use case.
-
----
-
-## 8. Task Architecture on Single-Core ESP32-C3
-
-The ESP32-C3 is single-core. The existing code pins the web server task to Core 0 using `xTaskCreatePinnedToCore(..., 0)`. On a single-core device, this is equivalent to `xTaskCreate` — all tasks run on Core 0.
-
-Recommended task priorities (higher number = higher priority):
-
-| Task | Priority | Notes |
-|---|---|---|
-| Arduino `loop()` | 1 | Heartbeat, card parsing, trigger flag |
-| Web server task | 2 | Already set this way |
-| BLE task | 1 | Same priority as loop; non-blocking design |
-
-The BLE task should use `vTaskDelay(pdMS_TO_TICKS(10))` within its loop to yield the CPU, preventing it from starving the web server or Wiegand interrupt handlers.
-
-Wiegand interrupt handlers (`IRAM_ATTR`) are not affected by task priorities — they preempt everything as hardware interrupts.
-
----
-
-## 9. Step-by-Step Implementation Order
-
-1. **Add NimBLE-Arduino** to `lib/` directory.
-2. **Create `hr_ble.h` / `hr_ble.cpp`** by porting from `VibrateBLE/hr_ble.cpp/h`, with GPIO trigger logic replaced by a public `TriggerVibrate()` function.
-3. **Update `hr_settings.h`** to add `bleEnabled`, `bleScanMode`, `bleMac`, and `bleTriggerPending`.
-4. **Update `hr_settings.cpp`** to load/save the new BLE settings from NVS.
-5. **Update `hr_util.cpp`** — change `CheckTriggerBLEScan()` to set the `bleTriggerPending` flag instead of pulsing EXT_PIN.
-6. **Update `hr_server.cpp`** — change `/triggerBleScan` handler to set the flag directly.
-7. **Update `hr_html.cpp`** — add BLE Enabled toggle and BLE Re-Scan option to the settings page.
-8. **Update `HidogeddonReaderV1.ino`** — add conditional BLE init and BLE task creation in `setup()`.
-9. **Set EXT_PIN to 255** in `hr_settings.h` to mark it unused.
-10. **Test**: Verify BLE scan finds FitPro, vibrate triggers from web UI, WiFi web interface remains responsive during BLE operation.
-
----
-
-## 10. What Can Be Removed
-
-Once integrated, the following are no longer needed:
-
-- The entire `VibrateBLE/` directory (secondary board firmware)
-- GPIO 5 EXT_PIN pulse logic in `hr_util.cpp`
-- Physical wire between the two ESP32 boards
-- The secondary ESP32-E board itself
-
-The `WiegandSend/` directory is a test utility and is unrelated to this change.
-
----
-
-## 11. Risk and Mitigations
-
-| Risk | Likelihood | Mitigation |
-|---|---|---|
-| RAM pressure under heavy WiFi + BLE load | Low | `bleEnabled` flag prevents NimBLE init if unused |
-| BLE task starves web server | Low | Use `vTaskDelay(10ms)` in BLE loop; web server priority is higher |
-| FitPro compatibility (M4/M5/M6) | None | Identical UUIDs and commands; no hardware change |
-| SPIFFS write contention from BLE task | Very Low | BLE task only writes BLE MAC to NVS (separate from SPIFFS card log) |
-| Wiegand interrupt timing disruption from BLE | Very Low | Interrupts are `IRAM_ATTR` and hardware-level; not affected by BLE scheduling |
-
----
-
-## 12. Conclusion
-
-Integrating the VibrateBLE functionality into the main HidogeddonReaderV1 firmware is straightforward and low-risk. The ESP32-C3 Super Mini has all required hardware (BLE 5.0, sufficient flash and RAM), and the NimBLE-Arduino library keeps the BLE footprint small (~100KB flash, ~25KB RAM). The estimated combined binary is under 1MB flash and under 200KB RAM — well within the 4MB / 400KB limits of the hardware.
-
-The key design decisions are:
-- Use **NimBLE-Arduino** (not standard BLE) for minimal size
-- Use a **volatile shared flag** (`bleTriggerPending`) instead of a GPIO wire for inter-task communication
-- Gate NimBLE initialisation behind a **`bleEnabled` setting** so users without a FitPro watch pay no RAM penalty
-- Run the BLE logic in a **dedicated low-priority FreeRTOS task** to avoid blocking the web server or card reader
+| NimBLE-Arduino | ~180KB | ~50-60KB at init |

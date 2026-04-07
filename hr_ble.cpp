@@ -21,12 +21,15 @@ void MaintainConnection(void) {
   pCharacteristic = nullptr;
 
   BLEAddress bleAddress(hrSettings::bleMAC.c_str());
-  pClient->connect(bleAddress, BLE_ADDR_TYPE_PUBLIC, 10000);
+  pClient->connect(bleAddress, BLE_ADDR_TYPE_PUBLIC, 5000);
   if (pClient->isConnected()) {
     BLERemoteService *pService = pClient->getService("6e400001-b5a3-f393-e0a9-e50e24dcca9d");
     if (pService) {
       pCharacteristic = pService->getCharacteristic("6e400002-b5a3-f393-e0a9-e50e24dcca9d");
     }
+  } else {
+    // Connection failed - back off before retrying to avoid starving WiFi
+    vTaskDelay(pdMS_TO_TICKS(30000));
   }
 }
 
@@ -46,13 +49,17 @@ void ScanDevices(void) {
   BLEScan *pBLEScan = BLEDevice::getScan();
   pBLEScan->setAdvertisedDeviceCallbacks(new BLECallBack());
   pBLEScan->setActiveScan(true);
+  // interval 100ms / window 50ms = 50% BLE duty cycle, leaves WiFi adequate airtime
   pBLEScan->setInterval(100);
-  pBLEScan->setWindow(99);
+  pBLEScan->setWindow(50);
   pBLEScan->start(5, false);
   pBLEScan->clearResults();
   if (hrSettings::bleMAC != "") {
     hrUtil::SaveSettings();
     hrSettings::bleScanMode = false;
+  } else {
+    // Device not found - back off before next scan to avoid starving WiFi
+    vTaskDelay(pdMS_TO_TICKS(30000));
   }
 }
 

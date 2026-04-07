@@ -66,7 +66,7 @@ extern String replayBin;
 
 //Hidogeddon Logo
 const extern unsigned char LOGO_OLED[];
-const extern String LOGO_HTML;
+const extern char LOGO_HTML[];
 
 }  //namespace hrSettings
 

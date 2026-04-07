@@ -59,6 +59,10 @@ Nimble-Arduino by h2zero v2.5.0
 #include "hr_ble.h"
 
 void BLETask(void* p) {
+  // Delay before init so WiFi AP, DNS and web server are fully running
+  // and have already served the captive portal before BLE consumes heap
+  vTaskDelay(pdMS_TO_TICKS(8000));
+  hrBLE::FitProM4Init();
   while (true) {
     if (hrSettings::bleScanMode) {
       hrBLE::ScanDevices();
@@ -81,7 +85,6 @@ void setup() {
   hrCardReader::CardReaderInit();
   hrServer::ServerInit();
   if (hrSettings::bleEnabled) {
-    hrBLE::FitProM4Init();
     xTaskCreate(BLETask, "BLE", 4096, NULL, 1, NULL);
   }
 }

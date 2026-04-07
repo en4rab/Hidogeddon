@@ -87,13 +87,14 @@ static void ServerTasks(void* p) {
       }
     }
 
-    String html = hrHTML::Header(autoRefresh, requestedPage);
-    html += hrHTML::Menu(autoRefresh);
-    html += hrHTML::VersionAndBuild();
-    html += hrHTML::LastCardData();
-    html += hrHTML::CardData(autoRefresh, requestedPage, showCloneAction);
-    html += hrHTML::Footer();
-    request->send(200, "text/html", html);
+    AsyncResponseStream *response = request->beginResponseStream("text/html");
+    response->print(hrHTML::Header(autoRefresh, requestedPage));
+    response->print(hrHTML::Menu(autoRefresh));
+    response->print(hrHTML::VersionAndBuild());
+    response->print(hrHTML::LastCardData());
+    response->print(hrHTML::CardData(autoRefresh, requestedPage, showCloneAction));
+    response->print(hrHTML::Footer());
+    request->send(response);
   });
 
   //Companion detect
@@ -163,10 +164,11 @@ static void ServerTasks(void* p) {
 
   //Shows send card number page
   webServer.on("/sendCardNumber", HTTP_GET, [](AsyncWebServerRequest* request) {
-    String html = hrHTML::Header(false, 1);
-    html += hrHTML::SendCardNumber(wiegandSelected);
-    html += hrHTML::Footer();
-    request->send(200, "text/html", html);
+    AsyncResponseStream *response = request->beginResponseStream("text/html");
+    response->print(hrHTML::Header(false, 1));
+    response->print(hrHTML::SendCardNumber(wiegandSelected));
+    response->print(hrHTML::Footer());
+    request->send(response);
   });
 
   //Send Wiegand (data recevied from send card number page)
@@ -229,10 +231,11 @@ static void ServerTasks(void* p) {
 
   //Shows confirm clear log page
   webServer.on("/confirmClearLog", HTTP_GET, [](AsyncWebServerRequest* request) {
-    String html = hrHTML::Header(false, 1);
-    html += hrHTML::ConfirmMessage("clearLog", "Are you sure you want to clear the log?");
-    html += hrHTML::Footer();
-    request->send(200, "text/html", html);
+    AsyncResponseStream *response = request->beginResponseStream("text/html");
+    response->print(hrHTML::Header(false, 1));
+    response->print(hrHTML::ConfirmMessage("clearLog", "Are you sure you want to clear the log?"));
+    response->print(hrHTML::Footer());
+    request->send(response);
   });
 
   //Clear log
@@ -251,10 +254,11 @@ static void ServerTasks(void* p) {
 
   //Shows confirm reboot ESP32 page
   webServer.on("/confirmReboot", HTTP_GET, [](AsyncWebServerRequest* request) {
-    String html = hrHTML::Header(false, 1);
-    html += hrHTML::ConfirmMessage("rebootESP32", "Are you sure you want to reboot the ESP32?");
-    html += hrHTML::Footer();
-    request->send(200, "text/html", html);
+    AsyncResponseStream *response = request->beginResponseStream("text/html");
+    response->print(hrHTML::Header(false, 1));
+    response->print(hrHTML::ConfirmMessage("rebootESP32", "Are you sure you want to reboot the ESP32?"));
+    response->print(hrHTML::Footer());
+    request->send(response);
   });
 
   //Reboot ESP32
@@ -272,10 +276,11 @@ static void ServerTasks(void* p) {
 
   //Shows confirm remove special cards
   webServer.on("/confirmRemoveSpecialCards", HTTP_GET, [](AsyncWebServerRequest* request) {
-    String html = hrHTML::Header(false, 1);
-    html += hrHTML::ConfirmMessage("RemoveSpecialCards", "Are you sure you want to remove all test and function cards?");
-    html += hrHTML::Footer();
-    request->send(200, "text/html", html);
+    AsyncResponseStream *response = request->beginResponseStream("text/html");
+    response->print(hrHTML::Header(false, 1));
+    response->print(hrHTML::ConfirmMessage("RemoveSpecialCards", "Are you sure you want to remove all test and function cards?"));
+    response->print(hrHTML::Footer());
+    request->send(response);
   });
 
   //Remove special cards
@@ -288,10 +293,11 @@ static void ServerTasks(void* p) {
 
   //Shows settings page
   webServer.on("/viewSettings", HTTP_GET, [](AsyncWebServerRequest* request) {
-    String html = hrHTML::Header(false, 1);
-    html += hrHTML::ViewSettings("");
-    html += hrHTML::Footer();
-    request->send(200, "text/html", html);
+    AsyncResponseStream *response = request->beginResponseStream("text/html");
+    response->print(hrHTML::Header(false, 1));
+    response->print(hrHTML::ViewSettings(""));
+    response->print(hrHTML::Footer());
+    request->send(response);
   });
 
   //Shows select special card page
@@ -317,10 +323,11 @@ static void ServerTasks(void* p) {
       }
 
       if (numOfBits >= 12 && numOfBits <= 255) {
-        String html = hrHTML::Header(false, 1);
-        html += hrHTML::ViewSelectSpecialCard(binaryData, requestedPage);
-        html += hrHTML::Footer();
-        request->send(200, "text/html", html);
+        AsyncResponseStream *response = request->beginResponseStream("text/html");
+        response->print(hrHTML::Header(false, 1));
+        response->print(hrHTML::ViewSelectSpecialCard(binaryData, requestedPage));
+        response->print(hrHTML::Footer());
+        request->send(response);
         return;
       }
     }
@@ -543,10 +550,11 @@ static void ServerTasks(void* p) {
       }
     }
 
-    String html = hrHTML::Header(false, 1);
-    html += hrHTML::ViewSettings(message);
-    html += hrHTML::Footer();
-    request->send(200, "text/html", html);
+    AsyncResponseStream *response = request->beginResponseStream("text/html");
+    response->print(hrHTML::Header(false, 1));
+    response->print(hrHTML::ViewSettings(message));
+    response->print(hrHTML::Footer());
+    request->send(response);
   });
   //-------------------------------------------------------------------------------------------------------------------------
 
