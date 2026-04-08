@@ -3,13 +3,14 @@
 
 namespace hrBLE {
 
-BLEClient *pClient = nullptr;
-BLERemoteCharacteristic *pCharacteristic = nullptr;
+NimBLEClient *pClient = nullptr;
+NimBLERemoteCharacteristic *pCharacteristic = nullptr;
 
 void FitProM4Init(void) {
-  BLEDevice::init("");
-  BLEDevice::setPower(ESP_PWR_LVL_P9);
-  pClient = BLEDevice::createClient();
+  NimBLEDevice::init("");
+  NimBLEDevice::setPower(9);
+  pClient = NimBLEDevice::createClient();
+  pClient->setConnectTimeout(5);  // seconds
 }
 
 void MaintainConnection(void) {
@@ -20,10 +21,10 @@ void MaintainConnection(void) {
   pClient->disconnect();
   pCharacteristic = nullptr;
 
-  BLEAddress bleAddress(hrSettings::bleMAC.c_str());
-  pClient->connect(bleAddress, BLE_ADDR_TYPE_PUBLIC, 5000);
+  NimBLEAddress bleAddress(hrSettings::bleMAC.c_str(), BLE_ADDR_PUBLIC);
+  pClient->connect(bleAddress);
   if (pClient->isConnected()) {
-    BLERemoteService *pService = pClient->getService("6e400001-b5a3-f393-e0a9-e50e24dcca9d");
+    NimBLERemoteService *pService = pClient->getService("6e400001-b5a3-f393-e0a9-e50e24dcca9d");
     if (pService) {
       pCharacteristic = pService->getCharacteristic("6e400002-b5a3-f393-e0a9-e50e24dcca9d");
     }
@@ -33,11 +34,11 @@ void MaintainConnection(void) {
   }
 }
 
-class BLECallBack : public BLEAdvertisedDeviceCallbacks {
-  void onResult(BLEAdvertisedDevice bleDevice) {
-    if (bleDevice.getName() == hrSettings::bleManufacturerTarget
+class BLECallBack : public NimBLEScanCallbacks {
+  void onResult(const NimBLEAdvertisedDevice* bleDevice) {
+    if (bleDevice->getName() == hrSettings::bleManufacturerTarget.c_str()
         && hrSettings::bleMAC == "") {
-      hrSettings::bleMAC = bleDevice.getAddress().toString();
+      hrSettings::bleMAC = bleDevice->getAddress().toString().c_str();
     }
   }
 };
@@ -46,8 +47,8 @@ void ScanDevices(void) {
   if (pClient == nullptr) { return; }
   pClient->disconnect();
   pCharacteristic = nullptr;
-  BLEScan *pBLEScan = BLEDevice::getScan();
-  pBLEScan->setAdvertisedDeviceCallbacks(new BLECallBack());
+  NimBLEScan *pBLEScan = NimBLEDevice::getScan();
+  pBLEScan->setScanCallbacks(new BLECallBack());
   pBLEScan->setActiveScan(true);
   // interval 100ms / window 50ms = 50% BLE duty cycle, leaves WiFi adequate airtime
   pBLEScan->setInterval(100);

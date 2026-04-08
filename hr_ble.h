@@ -2,11 +2,8 @@
 #define HR_BLE_H
 
 #include <Arduino.h>
-#include <BLEDevice.h>
-#include <BLEClient.h>
-#include <BLEUtils.h>
-#include <BLEScan.h>
-#include <BLEAdvertisedDevice.h>
+#include <NimBLEDevice.h>
+
 #include "hr_settings.h"
 
 namespace hrBLE {
