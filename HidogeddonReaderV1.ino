@@ -69,7 +69,7 @@ void BLETask(void* p) {
     } else {
       hrBLE::MaintainConnection();
     }
-    if (hrSettings::bleTriggerPending) {
+    if (hrSettings::bleTriggerPending && hrBLE::IsConnected()) {
       hrSettings::bleTriggerPending = false;
       hrBLE::TriggerVibrate();
     }

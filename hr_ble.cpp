@@ -10,7 +10,7 @@ void FitProM4Init(void) {
   NimBLEDevice::init("");
   NimBLEDevice::setPower(9);
   pClient = NimBLEDevice::createClient();
-  pClient->setConnectTimeout(5);  // seconds
+  pClient->setConnectTimeout(10000);
 }
 
 void MaintainConnection(void) {
@@ -21,7 +21,7 @@ void MaintainConnection(void) {
   pClient->disconnect();
   pCharacteristic = nullptr;
 
-  NimBLEAddress bleAddress(hrSettings::bleMAC.c_str(), BLE_ADDR_PUBLIC);
+  NimBLEAddress bleAddress(hrSettings::bleMAC.c_str(), BLE_ADDR_RANDOM);
   pClient->connect(bleAddress);
   if (pClient->isConnected()) {
     NimBLERemoteService *pService = pClient->getService("6e400001-b5a3-f393-e0a9-e50e24dcca9d");
@@ -35,25 +35,28 @@ void MaintainConnection(void) {
 }
 
 class BLECallBack : public NimBLEScanCallbacks {
-  void onResult(const NimBLEAdvertisedDevice* bleDevice) {
+  void onResult(const NimBLEAdvertisedDevice* bleDevice) override {
     if (bleDevice->getName() == hrSettings::bleManufacturerTarget.c_str()
         && hrSettings::bleMAC == "") {
+      NimBLEDevice::getScan()->stop();
       hrSettings::bleMAC = bleDevice->getAddress().toString().c_str();
     }
   }
 };
+
+static BLECallBack bleScanCallbacks;
 
 void ScanDevices(void) {
   if (pClient == nullptr) { return; }
   pClient->disconnect();
   pCharacteristic = nullptr;
   NimBLEScan *pBLEScan = NimBLEDevice::getScan();
-  pBLEScan->setScanCallbacks(new BLECallBack());
+  pBLEScan->setScanCallbacks(&bleScanCallbacks, false);
   pBLEScan->setActiveScan(true);
   // interval 100ms / window 50ms = 50% BLE duty cycle, leaves WiFi adequate airtime
   pBLEScan->setInterval(100);
   pBLEScan->setWindow(50);
-  pBLEScan->start(5, false);
+  pBLEScan->start(5000, false);
   pBLEScan->clearResults();
   if (hrSettings::bleMAC != "") {
     hrUtil::SaveSettings();
@@ -62,6 +65,12 @@ void ScanDevices(void) {
     // Device not found - back off before next scan to avoid starving WiFi
     vTaskDelay(pdMS_TO_TICKS(30000));
   }
+}
+
+bool IsConnected(void) {
+  return pClient != nullptr
+      && pClient->isConnected()
+      && pCharacteristic != nullptr;
 }
 
 void TriggerVibrate(void) {

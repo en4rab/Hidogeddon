@@ -283,6 +283,9 @@ static void SaveCardData(void) {
   hrSettings::lastCardData += "Bin: " + bin + "<br>";
   hrUtil::OLEDShowMessage("Card Saved", "", "Bits: " + String(bitCount), "", "Bin: " + bin, "");
   hrUtil::LedControl(true, false, false, true);
+  if (hrSettings::bleEnabled) {
+    hrUtil::RequestTriggerBLEScan();
+  }
 }
 
 static void AddAuthHeader(String header) {
