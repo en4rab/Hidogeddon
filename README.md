@@ -34,7 +34,10 @@ To use this firmware, you will need a Paxtogeddon OLED hardware board:
     git clone https://github.com/en4rab/Hidogeddon.git
     ```
 2.  Open the project in your preferred IDE (e.g., VS Code with PlatformIO or Arduino IDE).
-3.  Fight with dependencys
+3.  Fight with dependencies
 4.  Flash the firmware to your device.
 
+### ⚠️ Compiling
+The Paxtogeddon OLED hardware board is based on an ESP32-C£-Supermini which has 4Mb of flash
+The Default arduino IDE partition scheme is "Default 4MB with spiffs (1.2MB APP/1.5MB SPIFFS)" this code compiles to about 1.34MB so the partition must be set to a partition scheme with more space for the APP. Testing was done with HUGE APP but others with at least 1.4MB APP space should work.
 ---
