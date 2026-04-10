@@ -35,8 +35,9 @@ void SettingsInit(void) {
     hrSettings::wiegandInterleave = preferences.getInt("W_INTER", hrSettings::wiegandInterleave);
     hrSettings::wiegandLearnMode = preferences.getBool("W_LMODE", hrSettings::wiegandLearnMode);
     hrSettings::captureUnknownBitLengths = preferences.getBool("CAP_UBL", hrSettings::captureUnknownBitLengths);
-    hrSettings::bleEnabled = preferences.getBool("BLE_EN", hrSettings::bleEnabled);
-    hrSettings::bleMAC = preferences.getString("BLE_MAC", hrSettings::bleMAC);
+    hrSettings::bleEnabled  = preferences.getBool("BLE_EN",    hrSettings::bleEnabled);
+    hrSettings::bleMAC      = preferences.getString("BLE_MAC",  hrSettings::bleMAC);
+    hrSettings::bleAddrType = preferences.getUChar("BLE_ATYPE", hrSettings::bleAddrType);
   }
   preferences.end();
 
@@ -137,8 +138,9 @@ void SaveSettings(void) {
   preferences.putInt("W_INTER", hrSettings::wiegandInterleave);
   preferences.putBool("W_LMODE", hrSettings::wiegandLearnMode);
   preferences.putBool("CAP_UBL", hrSettings::captureUnknownBitLengths);
-  preferences.putBool("BLE_EN", hrSettings::bleEnabled);
-  preferences.putString("BLE_MAC", hrSettings::bleMAC);
+  preferences.putBool("BLE_EN",     hrSettings::bleEnabled);
+  preferences.putString("BLE_MAC",  hrSettings::bleMAC);
+  preferences.putUChar("BLE_ATYPE", hrSettings::bleAddrType);
   preferences.putBool("hrs_ok", true);
   preferences.end();
 }

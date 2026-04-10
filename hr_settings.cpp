@@ -79,6 +79,7 @@ String FC_SHOW_AP_INFO = "n";   //Function Card - Shows AP info on the OLED if t
 //BLE Settings
 //DO NOT CHANGE THESE
 const String bleManufacturerTarget = "716";
+uint8_t bleAddrType = 0;
 bool bleEnabled = false;
 String bleMAC = "";
 bool bleScanMode = false;
