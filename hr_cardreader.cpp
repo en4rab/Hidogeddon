@@ -693,18 +693,18 @@ static void Parse37bit(void) {
   AddAuthItem("Card Number", GetAuth(auth0), END);
   AddAuthHeader("HID H10304 (FARPOINTE)");
   AddAuthItem("Parity", parity, LINE);
-  AddAuthItem("Faciltiy Code", GetAuth(auth1), LINE);
+  AddAuthItem("Facility Code", GetAuth(auth1), LINE);
   AddAuthItem("Card Number", GetAuth(auth2), END);
   AddAuthHeader("GuardPoint MDI");
   AddAuthItem("Parity", parity, LINE);
-  AddAuthItem("Faciltiy Code", GetAuth(auth3), LINE);
+  AddAuthItem("Facility Code", GetAuth(auth3), LINE);
   AddAuthItem("Card Number", GetAuth(auth4), END);
   ClearParity();
   if (cardData[0] != ep2 % 2 == 0 ? 0 : 1) { parity = "Fail"; }
   if (cardData[33] != op2 % 2 == 0 ? 1 : 0) { parity = "Fail"; }
   AddAuthHeader("AWID RS2 34");
   AddAuthItem("Parity", parity, LINE);
-  AddAuthItem("Faciltiy Code", GetAuth(auth5), LINE);
+  AddAuthItem("Facility Code", GetAuth(auth5), LINE);
   AddAuthItem("Card Number", GetAuth(auth6), END);
   AddAuthHeader("HID Generic");
   AddAuthItem("Card Number", GetAuth(auth7), NONE);
