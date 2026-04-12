@@ -17,7 +17,7 @@ Hidogeddon is designed to run on the **same hardware as the Paxtogeddon reader**
 
 ### Key Features
 * **Hardware Compatibility:** Fully compatible with existing Paxtogeddon hardware setups.
-* **HID Support:** Decodes a wide variety of HID data formats.
+* **Multiple Auth Format Support:** Decodes a wide variety of data formats.
 * **Seamless Port:** Provides the same user experience and utility as Paxtogeddon, but for readers that provide wiegand output.
 
 ---
