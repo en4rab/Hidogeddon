@@ -2,10 +2,19 @@
 
 namespace hrHTML {
 
-String Header(bool autoRefresh, int requestedPage) {
-  String html = "<!DOCTYPE html><html onclick=\"\"><head>";
-  html += autoRefresh == true ? "<meta http-equiv=\"refresh\" content=\"" + hrSettings::webPollSeconds + "\">" : "";
-  html += "<meta charset=\"utf-8\"><title>Hidogeddon Reader</title><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><style type=\"text/css\">";
+String DocType(void) {
+  return "<!DOCTYPE html><html onclick=\"\"><head>";
+}
+
+String AutoRefresh(String seconds, String page) {
+  if (page == "") {
+    return "<meta http-equiv=\"refresh\" content=\"" + seconds + "\">";
+  }
+  return "<meta http-equiv=\"refresh\" content=\"" + seconds + ";url=" + page + "\">";
+}
+
+String Header(void) {
+  String html = "<meta charset=\"utf-8\"><title>Hidogeddon Reader</title><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><style type=\"text/css\">";
   html += "body,hr{margin:0}";
   html += ".logo,a:link{color:#fff}";
   html += ".btn,.dropdown-content a,a:link{text-decoration:none}";
@@ -41,7 +50,7 @@ String Header(bool autoRefresh, int requestedPage) {
   html += "form{border:none}";
   html += ".settingsHeader{color:#fff;padding:10px 0 15px;text-decoration:underline}";
   html += ".settingsName{padding:10px 0 5px}";
-  html += "input[type=number],input[type=text]{background-color:#0d0d0d;color:#fff;border:1px solid #2a2a2a;border-radius:5px;height:24px;width:100%;max-width:400px;margin:0 0 10px}";
+  html += "input[type=number],input[type=text],input[type=password]{background-color:#0d0d0d;color:#fff;border:1px solid #2a2a2a;border-radius:5px;height:24px;width:100%;max-width:400px;margin:0 0 10px}";
   html += "input[type=checkbox]{position:relative;left:10px;top:2px;margin:0 0 10px}";
   html += "select {background-color: #0D0D0D;color: #fff;border: 1px solid #2a2a2a;border-radius: 5px;height: 32px;width: 100%;max-width: 400px;margin: 0px 0px 10px 0px;";
   html += "-webkit-box-sizing: content-box;-moz-box-sizing: content-box;box-sizing: content-box;}";
@@ -59,10 +68,28 @@ String Header(bool autoRefresh, int requestedPage) {
   html += "if (allowMessages) { window.chrome.webview.postMessage(message);";
   html += "} else { alert('Please open this page in Hidogeddon Reader Companion to enable this option.') } }";
   html += "</script></head><body><table width=\"100%\" height=\"100%\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\"><tr><td align=\"center\" valign=\"top\">";
-  html += "<table width=\"100%\" border=\"0\" cellpadding=\"0\" cellspacing=\"0\" class=\"headSpacer\"><tr>";
+  return html;
+}
+
+String Logo(String link) {
+  String html = "<table width=\"100%\" border=\"0\" cellpadding=\"0\" cellspacing=\"0\" class=\"headSpacer\"><tr>";
   html += "<td height=\"60\" align=\"left\" valign=\"middle\" bgcolor=\"#1F272A\">";
-  html += "<div class=\"logo\"><a href=\"/?page=" + String(requestedPage) + "\"><img src=\"" + hrSettings::LOGO_HTML + "\" width=\"240\" height=\"60\"/></a></div></td>";
-  html += "</tr></table>";
+  html += "<div class=\"logo\"><a href=\"" + link + "\">";
+  html += "<img src=\"data:image/gif;base64,R0lGODdh8AA8AOMIAAAAgB8nKgCAgACA/4CAgICA/4D/gID//////////////////";
+  html += "////////////////ywAAAAA8AA8AAAE/jDISau9OOvNu/9gKI5kaZ5oqq5s675wLM90bd94ru987//AoHBILBqPyKRyyWw6n9Co";
+  html += "dEqtWq/YrHbL7Xq/4HARABiYz+h0mixuB8nquPzMdttzAMF8Lwfc/zVlfINofoCHL4KEiwOGiI8peoyLjpCWJJOTl5sjmYwaBKG";
+  html += "hAaIEpKIAo6QSBAIYpRYECAiiFKoWrqwWjqYXsL4Tta8EZJWsvaC3q6exyBW1ziWeixqzs6HWtLLZCKTcBdEF2c7b3Kbl2Nfb4t";
+  html += "eG69bK5dfB2+fwvtzarLPg48cH97wBVBeMn7x02Q5ECzGNULVxEPPJG+dO4r58tAJg3OhvoEVv/vkuWgM5KxZHVxx7WZwYMCXLe";
+  html += "Zga8nmoLqI5jgdImtPIkSfGl9ZSudxob5w8k0R9rsSoc2dKjyFjypxDU5tRiRy7De259SdQqxub0sqG9Jq/lGK7fR1L9OtCD1P3";
+  html += "VDVFVqeErAixdjXntu9eps/GCSinlNtdwHh7oiP5tkNcqhmujmQsMi9Cy2fhHYRmM2NnzJqzFrjgj7BRYaFnuUJ3kO+oxT4bc3g";
+  html += "sB1RPypQ7210s63VACvcWk2V9T/LtCv4MjGSX0VbqjMJH+nM+ErYI2nFsh8UdHWzJo9YL8j38PahSxspLKs0LmHrNeT9FUu5O92";
+  html += "Pr3wyxp9EOGDZ98MNp/lYKUCpVN1k2g0lX3HPsLeRWYZMRVk5O9EGoXlbS6IcGfztxx+Bm93g0EXvqndeSgp4tCB88HSIXn4WjW";
+  html += "cgPY4TBKJJRGWpoBof+BURceQyedxAAAiITZGzdedeLaXWVNR1roxCZFDp1Qbnki1LpyF99zfX40TgiKuXHic0B95GFV7IIU3BN";
+  html += "BvYedOaJhxGFanY5mXuXGfOBjmdseZSHUaUF55s3wvKSkR8JkFRsAUhZoptqBaiOb/AkCGRCcv6SpGwb8LkjTZc1VdR0aSFq31I";
+  html += "tvmRmqrPkFICiMEEqH5peRtoirDvxhh8Ing6gAa6hjqiTQi6SWip507WIbJk3wDJbj3hvPUvSq/H5aKBm7iVbIjucatDrBvWUsx";
+  html += "qp0pbl4HtyBgQsabFmGxg5j75bUJonOhNhuxMwF+s20GapIQehrHbLL/Qk040vS5JDADjNZKAMLr3FkssEE7/yjC0EEFswxsg8j";
+  html += "LHGGFOQSo5acmKyB4rop+fJLFeQMnYrtyxzoxrGPLPML8skgM03tyzJVHX0LPQEcEwT9NBIJ6300kw37fTTUEct9dRUV2311Vhn";
+  html += "rfXWXHft9ddghy322F9EAAA7\" width=\"240\" height=\"60\"/></a></div></td></tr></table>";
   return html;
 }
 
@@ -83,7 +110,7 @@ String Menu(bool autoRefresh) {
     //html += "<a href=\"/exportLog?d=0\">View Raw Log</a>";
     html += "<a href=\"/confirmClearLog\">Clear Log</a><hr>";
     html += "<a href=\"/confirmRemoveSpecialCards\">Remove Special Cards</a><hr>";
-    html += hrSettings::EXT_PIN == 255 ? "" : "<a href=\"/triggerBleScan\">Trigger BLE Scan</a><hr>";
+    html += hrSettings::bleEnabled ? "<a href=\"/triggerBleScan\">Pair FitPro via BLE</a><hr>" : "";
     html += "<a href=\"/confirmReboot\">Reboot</a><hr>";
     html += "<a href=\"/viewSettings\">Settings</a>";
     html += "</div></div>";
@@ -102,9 +129,26 @@ String Menu(bool autoRefresh) {
 String VersionAndBuild(void) {
   String html = "<table width=\"100%\" border=\"0\" cellspacing=\"5\" cellpadding=\"0\"><tr>";
   html += "<td align=\"left\" valign=\"top\"><div class=\"infoPanel\">";
-  html += "Version: " + hrSettings::VERSION_NUMBER + "<br>";
-  html += "Build Date: " + hrSettings::BUILD_DATE;
+  html += "Version: ";
+  html += hrSettings::VERSION_NUMBER;
+  html += "<br>Build Date: ";
+  html += hrSettings::BUILD_DATE;
   html += "</div></td></tr></table>";
+  return html;
+}
+
+String BLEStatus(void) {
+  if (!hrSettings::bleEnabled) { return ""; }
+  bool isConnected = hrBLE::BLEisConnected();
+  if (hrSettings::bleMAC == "") { isConnected = false; }
+  String html = "<table width=\"100%\" border=\"0\" cellspacing=\"5\" cellpadding=\"0\"><tr>";
+  html += "<td align=\"left\" valign=\"top\"><div class=\"infoPanel\">";
+  html += "FitPro BLE Status";
+  html += "<br>Device: ";
+  html += hrSettings::bleMAC == "" ? "None" : hrSettings::bleMAC;
+  html += "<br>State: ";
+  html += isConnected == true ? "Connected" : "Disconnected";
+  html += "<br></div></td></tr></table>";
   return html;
 }
 
@@ -116,32 +160,24 @@ String LastCardData(void) {
   return html;
 }
 
-int TotalCardsInLog(void) {
-  int logCount = 0;
-  File logFile = SPIFFS.open("/card_data.txt", "r");
-  if (logFile) {
-    while (logFile.available()) {
-      String line = logFile.readStringUntil('\n');
-      line.trim();
-      if (line.length() > 0) {
-        logCount++;
-      }
-    }
-    logFile.close();
-  }
-  return logCount;
+String LoadingMessage(void) {
+  String html = "<table width=\"100%\" border=\"0\" cellspacing=\"5\" cellpadding=\"0\"><tr>";
+  html += "<td align=\"left\" valign=\"top\"><div class=\"infoPanel\">";
+  html += "Loading, please wait...";
+  html += "</div></td></tr></table>";
+  return html;
 }
 
 String CardData(bool autoRefresh, int requestedPage, bool showCloneAction) {
-  int logCount = TotalCardsInLog();
-  String cardRows[logCount + 10];
+  int logCount = hrSettings::logCount;
+  String cardRows[logCount + 5];
   int totalPages = 0;
 
-  if (logCount <= 10) {
+  if (logCount <= 5) {
     totalPages = 1;
     requestedPage = 1;
   } else {
-    totalPages = ceil((float)logCount / 10);
+    totalPages = ceil((float)logCount / 5);
     if (requestedPage > totalPages) {
       requestedPage = 1;
     }
@@ -150,7 +186,7 @@ String CardData(bool autoRefresh, int requestedPage, bool showCloneAction) {
   if (logCount > 0) {
     File logFile = SPIFFS.open("/card_data.txt", "r");
     if (logFile) {
-      for (int i = 0; i < logCount + 10; i++) {
+      for (int i = 0; i < logCount + 5; i++) {
         cardRows[i] = "";
       }
       int i = logCount;
@@ -174,11 +210,11 @@ String CardData(bool autoRefresh, int requestedPage, bool showCloneAction) {
   html += logCount > 0 ? "Page " + String(requestedPage) + " of " + String(totalPages) : "";
   html += "</div></td></tr></table>";
 
-  if (!autoRefresh && logCount > 10) {
+  if (!autoRefresh && logCount > 5) {
     html += "<table width=\"100%\" border=\"0\" cellspacing=\"5\" cellpadding=\"0\"><tr>";
     html += "<td align=\"left\" valign=\"top\"><div class=\"btns\">";
-    html += requestedPage > 1 ? "<a href=\"/?page=" + String(requestedPage - 1) + "\" class=\"btn\">◀&nbsp;&nbsp;Previous&nbsp;</a>" : "";
-    html += requestedPage < totalPages ? "<a href=\"/?page=" + String(requestedPage + 1) + "\" class=\"btn\">&nbsp;Next&nbsp;&nbsp;▶</a>" : "";
+    html += requestedPage > 1 ? "<a href=\"/home?page=" + String(requestedPage - 1) + "\" class=\"btn\">◀&nbsp;&nbsp;Previous&nbsp;</a>" : "";
+    html += requestedPage < totalPages ? "<a href=\"/home?page=" + String(requestedPage + 1) + "\" class=\"btn\">&nbsp;Next&nbsp;&nbsp;▶</a>" : "";
     html += "</div></td></tr></table>";
   }
 
@@ -190,9 +226,9 @@ String CardData(bool autoRefresh, int requestedPage, bool showCloneAction) {
 
   if (logCount > 0) {
     int start = 1;
-    int end = requestedPage * 10;
+    int end = requestedPage * 5;
     if (requestedPage > 1) {
-      start = ((requestedPage - 1) * 10) + 1;
+      start = ((requestedPage - 1) * 5) + 1;
     }
 
     for (int i = start; i <= end; i++) {
@@ -273,7 +309,7 @@ String ConfirmMessage(String action, String message) {
   String html = "<table width=\"100%\" border=\"0\" cellspacing=\"5\" cellpadding=\"0\"><tr>";
   html += "<td align=\"left\" valign=\"top\"><div class=\"btns\">";
   html += "<a href=\"/" + action + "\" class=\"btn\">✅&nbsp;&nbsp;OK&nbsp;&nbsp;</a>";
-  html += "<a href=\"/\" class=\"btn\">❌&nbsp;&nbsp;Cancel&nbsp;&nbsp;</a>";
+  html += "<a href=\"/home\" class=\"btn\">❌&nbsp;&nbsp;Cancel&nbsp;&nbsp;</a>";
   html += "</div></td></tr></table>";
   html += "<table width=\"100%\" border=\"0\" cellspacing=\"5\" cellpadding=\"0\"><tr>";
   html += "<td align=\"left\" valign=\"top\"><div class=\"infoPanel\">";
@@ -287,7 +323,7 @@ String SendCardNumber(int wiegandSelected) {
   html += "<table width=\"100%\" border=\"0\" cellspacing=\"5\" cellpadding=\"0\"><tr>";
   html += "<td align=\"left\" valign=\"top\"><div class=\"btns\">";
   html += "<button type=\"submit\" class=\"btn\">✅&nbsp;&nbsp;Send&nbsp;&nbsp;</button>";
-  html += "<a href=\"/\" class=\"btn\">❌&nbsp;&nbsp;Cancel&nbsp;&nbsp;</a>";
+  html += "<a href=\"/home\" class=\"btn\">❌&nbsp;&nbsp;Cancel&nbsp;&nbsp;</a>";
   html += "</div></td></tr></table>";
   html += "<table width=\"100%\" border=\"0\" cellspacing=\"5\" cellpadding=\"0\"><tr>";
   html += "<td align=\"left\" valign=\"top\">";
@@ -318,7 +354,7 @@ String ViewSelectSpecialCard(String bin, int requestedPage) {
   html += "<table width=\"100%\" border=\"0\" cellspacing=\"5\" cellpadding=\"0\"><tr>";
   html += "<td align=\"left\" valign=\"top\"><div class=\"btns\">";
   html += "<button type=\"submit\" class=\"btn\">✅&nbsp;&nbsp;Save&nbsp;&nbsp;</button>";
-  html += "<a href=\"/?page=" + String(requestedPage) + "\" class=\"btn\">❌&nbsp;&nbsp;Cancel&nbsp;&nbsp;</a>";
+  html += "<a href=\"/home?page=" + String(requestedPage) + "\" class=\"btn\">❌&nbsp;&nbsp;Cancel&nbsp;&nbsp;</a>";
   html += "</div></td></tr></table>";
   html += "<table width=\"100%\" border=\"0\" cellspacing=\"5\" cellpadding=\"0\"><tr>";
   html += "<td align=\"left\" valign=\"top\">";
@@ -353,12 +389,13 @@ String ViewSettings(String message) {
   String oledConnected = hrSettings::oledConnected == true ? "checked" : "";
   String wiegandLearnMode = hrSettings::wiegandLearnMode == true ? "checked" : "";
   String captureUnknownBitLengths = hrSettings::captureUnknownBitLengths == true ? "checked" : "";
+  String bleEnabled = hrSettings::bleEnabled == true ? "checked" : "";
 
   String html = "<form id=\"esp32Settings\" name=\"esp32Settings\" method=\"post\" enctype=\"multipart/form-data\" action=\"/saveSettings\">";
   html += "<table width=\"100%\" border=\"0\" cellspacing=\"5\" cellpadding=\"0\"><tr>";
   html += "<td align=\"left\" valign=\"top\"><div class=\"btns\">";
   html += "<button type=\"submit\" class=\"btn\">✅&nbsp;&nbsp;Save&nbsp;&nbsp;</button>";
-  html += "<a href=\"/\" class=\"btn\">❌&nbsp;&nbsp;Cancel&nbsp;&nbsp;</a>";
+  html += "<a href=\"/home\" class=\"btn\">❌&nbsp;&nbsp;Cancel&nbsp;&nbsp;</a>";
   html += "</div></td></tr></table>";
 
   if (message != "") {
@@ -382,7 +419,7 @@ String ViewSettings(String message) {
   html += "<td align=\"left\" valign=\"top\"><div class=\"infoPanel\">";
   html += "<div class=\"settingsHeader\">When connecting to an Access Point</div>";
   html += "<div class=\"settingsName\">SSID</div><input type=\"text\" id=\"ssid\" name=\"ssid\" value=\"" + hrSettings::wifiSSID + "\">";
-  html += "<div class=\"settingsName\">Password</div><input type=\"text\" id=\"ssidpassword\" name=\"ssidpassword\" value=\"" + hrSettings::wifiPassword + "\">";
+  html += "<div class=\"settingsName\">Password</div><input type=\"password\" id=\"ssidpassword\" name=\"ssidpassword\" value=\"" + hrSettings::wifiPassword + "\">";
   html += "</div></td></tr></table>";
 
   //Wiegnad Send
@@ -408,6 +445,7 @@ String ViewSettings(String message) {
   html += "<div class=\"settingsName\">HTML Auto Refresh (seconds)</div><input type=\"number\" min=\"1\" max=\"60\" id=\"refreshseconds\" name=\"refreshseconds\" value=\"" + hrSettings::webPollSeconds + "\">";
   html += "<div class=\"settingsName\">Allow Captive Portal:<input type=\"checkbox\" id=\"allowcaptiveportal\" name=\"allowcaptiveportal\" " + allowCaptivePortal + "></div>";
   html += "<div class=\"settingsName\">OLED Connected:<input type=\"checkbox\" id=\"oledconnected\" name=\"oledconnected\" " + oledConnected + "></div>";
+  html += "<div class=\"settingsName\">BLE Enabled:<input type=\"checkbox\" id=\"bleenabled\" name=\"bleenabled\" " + bleEnabled + "></div>";
   html += "</div></td></tr></table></form>";
   return html;
 }

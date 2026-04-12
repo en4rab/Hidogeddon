@@ -13,42 +13,12 @@ void ServerInit(void) {
 }
 
 static void ServerTasks(void* p) {
-  //Connect to WiFi or Start AP
+  if (hrSettings::bleEnabled) { vTaskDelay(pdMS_TO_TICKS(5000)); }
   bool captivePortalEnabled = hrSettings::allowCaptivePortal;
-  if (hrSettings::wifiSSID == "" || hrSettings::wifiPassword == "") {
-    hrSettings::oneShotConnectToAP = false;
-  }
-
-  if (hrSettings::oneShotConnectToAP) {
-    captivePortalEnabled = false;
-    WiFi.mode(WIFI_STA);
-    WiFi.begin(hrSettings::wifiSSID, hrSettings::wifiPassword);
-    while (WiFi.status() != WL_CONNECTED) {
-      hrUtil::LedControl(false, true, false, false);
-      hrUtil::LedControl(true, false, true, false);
-    }
-    hrUtil::LedControl(true, true, true, false);
-    baseURL = "http://" + WiFi.localIP().toString();
-    hrSettings::wifiIP = WiFi.localIP();
-  } else {
-    WiFi.mode(WIFI_AP);
-    WiFi.softAP(hrSettings::apSSID, hrSettings::apPassword);
-    IPAddress apSubnet(255, 255, 255, 0);
-    WiFi.softAPConfig(hrSettings::apIP, hrSettings::apIP, apSubnet);
-    delay(500);
-    baseURL = "http://" + hrSettings::apIP.toString();
-  }
-
-  //Start DNS server
+  if (hrSettings::wifiSSID == "" || hrSettings::wifiPassword == "") { hrSettings::oneShotConnectToAP = false; }
+  if (hrSettings::oneShotConnectToAP) { captivePortalEnabled = false; }
   DNSServer dnsServer;
-  if (captivePortalEnabled) {
-    dnsServer.start(53, "*", hrSettings::apIP);
-  }
-
-  //Start web server
   AsyncWebServer webServer(80);
-  webServer.begin();
-
 
   //----- Captive Portal ----------------------------------------------------------------------------------------------------
   if (captivePortalEnabled) {
@@ -74,9 +44,9 @@ static void ServerTasks(void* p) {
   }
   //-------------------------------------------------------------------------------------------------------------------------
 
-
-  //----- Hidogeddon Reader ------------------------------------------------------------------------------------------------
-  //Shows home page
+  //----- Hidogeddon Reader -------------------------------------------------------------------------------------------------
+  //Initial load, displays "Loading, please wait..." message
+  //reduces data processing on captive portal detect/redirect
   webServer.on("/", HTTP_GET, [](AsyncWebServerRequest* request) {
     int requestedPage = 1;
     if (!autoRefresh && request->params() == 1 && request->hasParam("page")) {
@@ -87,39 +57,40 @@ static void ServerTasks(void* p) {
       }
     }
 
-    String html = hrHTML::Header(autoRefresh, requestedPage);
-    html += hrHTML::Menu(autoRefresh);
-    html += hrHTML::VersionAndBuild();
-    html += hrHTML::LastCardData();
-    html += hrHTML::CardData(autoRefresh, requestedPage, showCloneAction);
-    html += hrHTML::Footer();
-    request->send(200, "text/html", html);
+    AsyncResponseStream* response = request->beginResponseStream("text/html");
+    response->print(hrHTML::DocType());
+    response->print(hrHTML::AutoRefresh("2", baseURL + "/home"));
+    response->print(hrHTML::Header());
+    response->print(hrHTML::Logo("#"));
+    response->print(hrHTML::LoadingMessage());
+    response->print(hrHTML::Footer());
+    request->send(response);
   });
 
-  //Companion detect
-  // webServer.on("/companionDetect", HTTP_GET, [](AsyncWebServerRequest* request) {
-  //   request->send(200, "text/html", "hidogeddon-reader");
-  // });
+  //Shows home page
+  webServer.on("/home", HTTP_GET, [](AsyncWebServerRequest* request) {
+    int requestedPage = 1;
+    if (!autoRefresh && request->params() == 1 && request->hasParam("page")) {
+      AsyncWebParameter* p1 = request->getParam("page");
+      String page = p1->value();
+      if (hrUtil::IsNumeric(page)) {
+        requestedPage = page.toInt();
+      }
+    }
 
-  //Get special cards (test and function)
-  // webServer.on("/getSpecialCards", HTTP_GET, [](AsyncWebServerRequest* request) {
-  //   String data = hrSettings::TEST_CARD + ",";
-  //   data += hrSettings::FC_DEFAULT + ",";
-  //   data += hrSettings::FC_CONNECT_TO_AP + ",";
-  //   data += hrSettings::FC_SHOW_AP_INFO;
-  //   request->send(200, "text/html", data);
-  // });
-
-  //Companion clone action button
-  // webServer.on("/enableCloneAction", HTTP_GET, [](AsyncWebServerRequest* request) {
-  //   showCloneAction = true;
-  //   request->send(200, "text/html", "ok");
-  // });
-
-  // webServer.on("/disableCloneAction", HTTP_GET, [](AsyncWebServerRequest* request) {
-  //   showCloneAction = false;
-  //   request->send(200, "text/html", "ok");
-  // });
+    AsyncResponseStream* response = request->beginResponseStream("text/html");
+    response->print(hrHTML::DocType());
+    if (autoRefresh) { response->print(hrHTML::AutoRefresh(hrSettings::webPollSeconds, "")); }
+    response->print(hrHTML::Header());
+    response->print(hrHTML::Logo("/home"));
+    response->print(hrHTML::Menu(autoRefresh));
+    response->print(hrHTML::VersionAndBuild());
+    response->print(hrHTML::BLEStatus());
+    response->print(hrHTML::LastCardData());
+    response->print(hrHTML::CardData(autoRefresh, requestedPage, showCloneAction));
+    response->print(hrHTML::Footer());
+    request->send(response);
+  });
 
   //Replays binary data via Wiegand
   webServer.on("/replayCard", HTTP_GET, [](AsyncWebServerRequest* request) {
@@ -152,21 +123,24 @@ static void ServerTasks(void* p) {
       }
     }
 
-    request->redirect(baseURL + "/?page=" + String(requestedPage));
+    request->redirect(baseURL + "/home?page=" + String(requestedPage));
   });
 
   //Toggle auto refresh on/off
   webServer.on("/toggleRefresh", HTTP_GET, [](AsyncWebServerRequest* request) {
     autoRefresh = !autoRefresh;
-    request->redirect(baseURL);
+    request->redirect(baseURL + "/home");
   });
 
   //Shows send card number page
   webServer.on("/sendCardNumber", HTTP_GET, [](AsyncWebServerRequest* request) {
-    String html = hrHTML::Header(false, 1);
-    html += hrHTML::SendCardNumber(wiegandSelected);
-    html += hrHTML::Footer();
-    request->send(200, "text/html", html);
+    AsyncResponseStream* response = request->beginResponseStream("text/html");
+    response->print(hrHTML::DocType());
+    response->print(hrHTML::Header());
+    response->print(hrHTML::Logo("/home"));
+    response->print(hrHTML::SendCardNumber(wiegandSelected));
+    response->print(hrHTML::Footer());
+    request->send(response);
   });
 
   //Send Wiegand (data recevied from send card number page)
@@ -199,7 +173,7 @@ static void ServerTasks(void* p) {
         hrUtil::OLEDShowMessage("Send Wiegand", "", ":Number:", cardNo, ":Bits:", String(numOfBits));
       }
     }
-    request->redirect(baseURL);
+    request->redirect(baseURL + "/home");
   });
 
   //Download/view raw log
@@ -224,37 +198,72 @@ static void ServerTasks(void* p) {
     }
 
     hrSettings::lastCardData = "Logfile not available";
-    request->redirect(baseURL);
+    request->redirect(baseURL + "/home");
   });
 
   //Shows confirm clear log page
   webServer.on("/confirmClearLog", HTTP_GET, [](AsyncWebServerRequest* request) {
-    String html = hrHTML::Header(false, 1);
-    html += hrHTML::ConfirmMessage("clearLog", "Are you sure you want to clear the log?");
-    html += hrHTML::Footer();
-    request->send(200, "text/html", html);
+    AsyncResponseStream* response = request->beginResponseStream("text/html");
+    response->print(hrHTML::DocType());
+    response->print(hrHTML::Header());
+    response->print(hrHTML::Logo("/home"));
+    response->print(hrHTML::ConfirmMessage("clearLog", "Are you sure you want to clear the log?"));
+    response->print(hrHTML::Footer());
+    request->send(response);
   });
 
   //Clear log
   webServer.on("/clearLog", HTTP_GET, [](AsyncWebServerRequest* request) {
-    SPIFFS.remove("/card_data.txt");
-    hrSettings::lastCardData = "Logfile cleared";
-    request->redirect(baseURL);
+    if (SPIFFS.remove("/card_data.txt")) {
+      hrSettings::logCount = 0;
+      hrSettings::lastCardData = "Logfile cleared";
+    } else {
+      hrSettings::lastCardData = "Error: could not clear log";
+    }
+    request->redirect(baseURL + "/home");
   });
 
-  //Trigger BLE Scan (via VibrateBLE firmware on another ESP32)
+  //Trigger BLE Scan
   webServer.on("/triggerBleScan", HTTP_GET, [](AsyncWebServerRequest* request) {
-    hrSettings::lastCardData = "Trigger BLE Scan command sent";
-    hrUtil::RequestTriggerBLEScan();
-    request->redirect(baseURL);
+    if (hrBLE::BLEAction("Scan")) {
+      hrSettings::lastCardData = "Searching for FitPro devices, please wait...";
+      request->redirect(baseURL + "/ShowBleScanProgress");
+      return;
+    }
+
+    hrSettings::lastCardData = "BLE is busy, please try again in a moment";
+    request->redirect(baseURL + "/home");
+  });
+
+  //Show BLE Scan Progress
+  webServer.on("/ShowBleScanProgress", HTTP_GET, [](AsyncWebServerRequest* request) {
+    if (hrBLE::BLEisScanComplete()) {
+      if (hrBLE::BLEisConnected()) { hrUtil::SaveBLESettings(); }
+      hrSettings::lastCardData = "Scan complete";
+      request->redirect(baseURL);
+      return;
+    }
+
+    AsyncResponseStream* response = request->beginResponseStream("text/html");
+    response->print(hrHTML::DocType());
+    response->print(hrHTML::AutoRefresh("1", ""));
+    response->print(hrHTML::Header());
+    response->print(hrHTML::Logo("#"));
+    response->print(hrHTML::BLEStatus());
+    response->print(hrHTML::LastCardData());
+    response->print(hrHTML::Footer());
+    request->send(response);
   });
 
   //Shows confirm reboot ESP32 page
   webServer.on("/confirmReboot", HTTP_GET, [](AsyncWebServerRequest* request) {
-    String html = hrHTML::Header(false, 1);
-    html += hrHTML::ConfirmMessage("rebootESP32", "Are you sure you want to reboot the ESP32?");
-    html += hrHTML::Footer();
-    request->send(200, "text/html", html);
+    AsyncResponseStream* response = request->beginResponseStream("text/html");
+    response->print(hrHTML::DocType());
+    response->print(hrHTML::Header());
+    response->print(hrHTML::Logo("/home"));
+    response->print(hrHTML::ConfirmMessage("rebootESP32", "Are you sure you want to reboot the ESP32?"));
+    response->print(hrHTML::Footer());
+    request->send(response);
   });
 
   //Reboot ESP32
@@ -262,20 +271,23 @@ static void ServerTasks(void* p) {
     autoRefresh = false;
     if (showCloneAction) {
       hrSettings::lastCardData = "Reboot command sent<br>Device will reconnect to AP";
-      hrUtil::RequestRebootAndConnectToAP(5000);
+      hrUtil::RequestRebootAndConnectToAP(3000);
     } else {
       hrSettings::lastCardData = "Reboot command sent";
-      hrUtil::RequestReboot(5000);
+      hrUtil::RequestReboot(3000);
     }
-    request->redirect(baseURL);
+    request->redirect(baseURL + "/home");
   });
 
   //Shows confirm remove special cards
   webServer.on("/confirmRemoveSpecialCards", HTTP_GET, [](AsyncWebServerRequest* request) {
-    String html = hrHTML::Header(false, 1);
-    html += hrHTML::ConfirmMessage("RemoveSpecialCards", "Are you sure you want to remove all test and function cards?");
-    html += hrHTML::Footer();
-    request->send(200, "text/html", html);
+    AsyncResponseStream* response = request->beginResponseStream("text/html");
+    response->print(hrHTML::DocType());
+    response->print(hrHTML::Header());
+    response->print(hrHTML::Logo("/home"));
+    response->print(hrHTML::ConfirmMessage("RemoveSpecialCards", "Are you sure you want to remove all test and function cards?"));
+    response->print(hrHTML::Footer());
+    request->send(response);
   });
 
   //Remove special cards
@@ -283,15 +295,18 @@ static void ServerTasks(void* p) {
     autoRefresh = false;
     hrUtil::ClearSpecialCards();
     hrSettings::lastCardData = "Speical cards have been removed";
-    request->redirect(baseURL);
+    request->redirect(baseURL + "/home");
   });
 
   //Shows settings page
   webServer.on("/viewSettings", HTTP_GET, [](AsyncWebServerRequest* request) {
-    String html = hrHTML::Header(false, 1);
-    html += hrHTML::ViewSettings("");
-    html += hrHTML::Footer();
-    request->send(200, "text/html", html);
+    AsyncResponseStream* response = request->beginResponseStream("text/html");
+    response->print(hrHTML::DocType());
+    response->print(hrHTML::Header());
+    response->print(hrHTML::Logo("/home"));
+    response->print(hrHTML::ViewSettings(""));
+    response->print(hrHTML::Footer());
+    request->send(response);
   });
 
   //Shows select special card page
@@ -317,14 +332,17 @@ static void ServerTasks(void* p) {
       }
 
       if (numOfBits >= 12 && numOfBits <= 255) {
-        String html = hrHTML::Header(false, 1);
-        html += hrHTML::ViewSelectSpecialCard(binaryData, requestedPage);
-        html += hrHTML::Footer();
-        request->send(200, "text/html", html);
+        AsyncResponseStream* response = request->beginResponseStream("text/html");
+        response->print(hrHTML::DocType());
+        response->print(hrHTML::Header());
+        response->print(hrHTML::Logo("/home"));
+        response->print(hrHTML::ViewSelectSpecialCard(binaryData, requestedPage));
+        response->print(hrHTML::Footer());
+        request->send(response);
         return;
       }
     }
-    request->redirect(baseURL + "/?page=" + String(requestedPage));
+    request->redirect(baseURL + "/home?page=" + String(requestedPage));
   });
 
   //Save special cards
@@ -371,7 +389,7 @@ static void ServerTasks(void* p) {
         hrSettings::lastCardData += "Bin: " + binaryData + "<br>";
       }
     }
-    request->redirect(baseURL + "/?page=" + String(requestedPage));
+    request->redirect(baseURL + "/home?page=" + String(requestedPage));
   });
 
   //Save settings
@@ -487,51 +505,52 @@ static void ServerTasks(void* p) {
           hrSettings::wiegandInterleave = wil;
           hrSettings::wiegandLearnMode = false;
           hrSettings::captureUnknownBitLengths = false;
+          hrSettings::bleEnabled = false;
 
           if (request->hasParam("allowcaptiveportal", true)) {
             AsyncWebParameter* p9 = request->getParam("allowcaptiveportal", true);
-            if (p9->value() == "on") {
-              hrSettings::allowCaptivePortal = true;
-            }
+            if (p9->value() == "on") { hrSettings::allowCaptivePortal = true; }
           }
 
           if (request->hasParam("oledconnected", true)) {
             AsyncWebParameter* p10 = request->getParam("oledconnected", true);
-            if (p10->value() == "on") {
-              hrSettings::oledConnected = true;
-            }
+            if (p10->value() == "on") { hrSettings::oledConnected = true; }
           }
 
           if (request->hasParam("wiegandlearnmode", true)) {
             AsyncWebParameter* p11 = request->getParam("wiegandlearnmode", true);
-            if (p11->value() == "on") {
-              hrSettings::wiegandLearnMode = true;
-            }
+            if (p11->value() == "on") { hrSettings::wiegandLearnMode = true; }
           }
 
           if (request->hasParam("captureunknownbitlengths", true)) {
             AsyncWebParameter* p12 = request->getParam("captureunknownbitlengths", true);
-            if (p12->value() == "on") {
-              hrSettings::captureUnknownBitLengths = true;
-            }
+            if (p12->value() == "on") { hrSettings::captureUnknownBitLengths = true; }
+          }
+
+          if (request->hasParam("bleenabled", true)) {
+            AsyncWebParameter* p13 = request->getParam("bleenabled", true);
+            if (p13->value() == "on") { hrSettings::bleEnabled = true; }
           }
 
           hrUtil::SaveSettings();
           if (showCloneAction) {
             message = "Settings have been saved<br>Reboot command sent<br>Device will reconnect to AP";
-            hrUtil::RequestRebootAndConnectToAP(5000);
+            hrUtil::RequestRebootAndConnectToAP(3000);
           } else {
             message = "Settings have been saved<br>Reboot command sent";
-            hrUtil::RequestReboot(5000);
+            hrUtil::RequestReboot(3000);
           }
         }
       }
     }
 
-    String html = hrHTML::Header(false, 1);
-    html += hrHTML::ViewSettings(message);
-    html += hrHTML::Footer();
-    request->send(200, "text/html", html);
+    AsyncResponseStream* response = request->beginResponseStream("text/html");
+    response->print(hrHTML::DocType());
+    response->print(hrHTML::Header());
+    response->print(hrHTML::Logo("/home"));
+    response->print(hrHTML::ViewSettings(message));
+    response->print(hrHTML::Footer());
+    request->send(response);
   });
   //-------------------------------------------------------------------------------------------------------------------------
 
@@ -541,6 +560,29 @@ static void ServerTasks(void* p) {
     request->send(404);
   });
   //-------------------------------------------------------------------------------------------------------------------------
+
+
+  if (hrSettings::oneShotConnectToAP) {
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(hrSettings::wifiSSID, hrSettings::wifiPassword);
+    while (WiFi.status() != WL_CONNECTED) {
+      hrUtil::LedControl(false, true, false, false);
+      hrUtil::LedControl(true, false, true, false);
+    }
+    hrUtil::LedControl(true, true, true, false);
+    baseURL = "http://" + WiFi.localIP().toString();
+    hrSettings::wifiIP = WiFi.localIP();
+  } else {
+    WiFi.mode(WIFI_AP);
+    WiFi.softAP(hrSettings::apSSID, hrSettings::apPassword);
+    IPAddress apSubnet(255, 255, 255, 0);
+    WiFi.softAPConfig(hrSettings::apIP, hrSettings::apIP, apSubnet);
+    vTaskDelay(pdMS_TO_TICKS(500));
+    baseURL = "http://" + hrSettings::apIP.toString();
+    if (captivePortalEnabled) { dnsServer.start(53, "*", hrSettings::apIP); }
+  }
+
+  webServer.begin();
 
   //Keep task alive
   while (true) {

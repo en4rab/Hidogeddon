@@ -5,14 +5,19 @@
 #include <SPIFFS.h>
 #include "hr_settings.h"
 #include "hr_util.h"
+#include "hr_ble.h"
 
 namespace hrHTML {
 
-String Header(bool autoRefresh, int requestedPage);
+String DocType(void);
+String AutoRefresh(String seconds, String page);
+String Header(void);
+String Logo(String link);
 String Menu(bool autoRefresh);
 String VersionAndBuild(void);
+String BLEStatus(void);
 String LastCardData(void);
-int TotalCardsInLog(void);
+String LoadingMessage(void);
 String CardData(bool autoRefresh, int requestedPage, bool showCloneAction);
 String ConfirmMessage(String action, String message);
 String SendCardNumber(int wiegandSelected);

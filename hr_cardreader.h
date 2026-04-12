@@ -5,6 +5,7 @@
 #include <SPIFFS.h>
 #include "hr_settings.h"
 #include "hr_util.h"
+#include "hr_ble.h"
 
 namespace hrCardReader {
 
@@ -18,7 +19,7 @@ static void ClearAuthData(void);
 static void ClearParity(void);
 static void WiegandLearn(void);
 static bool IsFunctionCard(void);
-static void SaveCardData();
+static void SaveCardData(void);
 static void AddAuthHeader(String header);
 static void AddAuthItem(String key, String value, String separator);
 static uint64_t BitOp(int i, uint64_t n);

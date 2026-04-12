@@ -7,15 +7,16 @@ _   _ ___________ _____ _____  _________________ _____ _   _
 \_| |_/\___/|___/  \___/ \____/\____/|___/ |___/  \___/\_| \_/
 
 Product Name:  Hidogeddon Reader
-Version:       1.0
-Build Date:    2026-04-06
+Version:       1.1
+Build Date:    2026-04-12
 Author:        Daniel Raines [ Dr0pR00t ] [ https://www.linkedin.com/in/danielraines ]
 
 ::CREDITS::
 ALL: Moral support + just being an awesome dudes!
 0xFFFF and 00Waz: Data Formats [see below references]
-En4rab: OLED Hidogeddon Logo
-Cardinal_Black: Original BLE lib/commands for FitPro M4/M5/M6 > VibrateBLE.ino
+en4rab: OLED Hidogeddon Logo
+en4rab + "Hungry ghost in a jar": co-author for NimBLE integration
+Cardinal_Black: Original BLE lib/commands for FitPro M4/M5/M6
 Craigsblackie & Iceman: ASCII art
 
 ::REFERENCES::
@@ -46,6 +47,10 @@ AsyncTCP by dvarrel v1.1.4
 Adafruit SSD1306 by Adafruit v2.5.14
 Adafruit GFX Library by Adafruit v1.12.1
 Adafruit BusIO by Adafruit v1.17.1
+NimBLE-Arduino by h2zero v2.5.0
+
+::IMPORTANT::
+CHANGE PARTITION SCHEME TO "Huge APP (3MB No OTA/1MB SPIFFS)" UNDER THE TOOLS MENU
 
 */
 
@@ -55,19 +60,32 @@ Adafruit BusIO by Adafruit v1.17.1
 #include "hr_server.h"
 #include "hr_html.h"
 #include "hr_cardreader.h"
+#include "hr_ble.h"
 
 void setup() {
+  //Serial.begin(115200);
   hrUtil::SettingsInit();
   hrUtil::GPIOInit();
   hrUtil::OLEDInit();
   hrUtil::SPIFFSInit();
   hrCardReader::CardReaderInit();
   hrServer::ServerInit();
+  hrBLE::BLEInit();
 }
 
 void loop() {
   hrUtil::HeartBeat();
   hrUtil::CheckReboot();
-  hrUtil::CheckTriggerBLEScan();
   hrCardReader::ParseCard();
+
+  //delay(500);
+  // Serial.print("Total heap size: ");
+  // Serial.println(ESP.getHeapSize());
+  // Serial.print("Available heap: ");
+  // Serial.println(ESP.getFreeHeap());
+  // Serial.print("Lowest level since boot: ");
+  // Serial.println(ESP.getMinFreeHeap());
+  // Serial.print("Max alloc: ");
+  // Serial.println(ESP.getMaxAllocHeap());
+  // Serial.println("");
 }

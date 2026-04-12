@@ -227,6 +227,7 @@ static bool IsFunctionCard(void) {
     hrUtil::LedControl(true, false, false, false);
     hrUtil::ClearSettings();
     hrUtil::ClearSpecialCards();
+    hrUtil::ClearBLESettings();
     hrUtil::RequestReboot(1000);
   }
 
@@ -279,6 +280,8 @@ static void SaveCardData(void) {
   logFile.print(",");
   logFile.println(auth);
   logFile.close();
+  hrSettings::logCount = hrSettings::logCount + 1;
+  hrBLE::BLEAction("Vibrate");
   hrSettings::lastCardData = "Bits: " + String(bitCount) + "<br>";
   hrSettings::lastCardData += "Bin: " + bin + "<br>";
   hrUtil::OLEDShowMessage("Card Saved", "", "Bits: " + String(bitCount), "", "Bin: " + bin, "");

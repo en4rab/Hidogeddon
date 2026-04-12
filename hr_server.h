@@ -10,6 +10,7 @@
 #include "hr_settings.h"
 #include "hr_util.h"
 #include "hr_html.h"
+#include "hr_ble.h"
 
 namespace hrServer {
 

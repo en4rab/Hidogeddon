@@ -6,30 +6,30 @@
 namespace hrSettings {
 
 //Product
-const extern String VERSION_NUMBER;
-const extern String BUILD_DATE;
+const extern char VERSION_NUMBER[];
+const extern char BUILD_DATE[];
 
 //Debug Mode
 const extern bool SERIAL_CONSOLE_ONLY_DEBUG_MODE;
 
 //PIN Assignments
-const extern byte HEARTBEAT_LED_PIN;
-const extern byte D1_PIN;
-const extern byte D0_PIN;
-const extern byte NOT_USED_PIN_A;
-const extern byte NOT_USED_PIN_B;
-const extern byte GREEN_LED_PIN;
-const extern byte YELLOW_LED_PIN;
-const extern byte RED_LED_PIN;
-const extern byte EXT_PIN;
-const extern byte OLED_SDA_PIN;
-const extern byte OLED_SCL_PIN;
+const extern uint8_t HEARTBEAT_LED_PIN;
+const extern uint8_t D1_PIN;
+const extern uint8_t D0_PIN;
+const extern uint8_t NOT_USED_PIN_A;
+const extern uint8_t NOT_USED_PIN_B;
+const extern uint8_t GREEN_LED_PIN;
+const extern uint8_t YELLOW_LED_PIN;
+const extern uint8_t RED_LED_PIN;
+const extern uint8_t EXT_PIN;
+const extern uint8_t OLED_SDA_PIN;
+const extern uint8_t OLED_SCL_PIN;
 
 //OLED
-const extern byte SCREEN_WIDTH;
-const extern byte SCREEN_HEIGHT;
-const extern byte OLED_RESET;
-const extern byte SCREEN_ADDRESS;
+const extern uint8_t SCREEN_WIDTH;
+const extern uint8_t SCREEN_HEIGHT;
+const extern uint8_t OLED_RESET;
+const extern uint8_t SCREEN_ADDRESS;
 
 //User Config Defaults (HTML Settings Page)
 extern String apSSID;
@@ -45,6 +45,12 @@ extern int wiegandPulseWidth;
 extern int wiegandInterleave;
 extern bool wiegandLearnMode;
 extern bool captureUnknownBitLengths;
+extern bool bleEnabled;
+
+//BLE Settings
+const extern char *bleManufacturerTarget;
+extern uint8_t bleAddrType;
+extern String bleMAC;
 
 //User Config Defaults (HTML Special Cards page)
 extern String TEST_CARD;
@@ -56,10 +62,7 @@ extern String FC_SHOW_AP_INFO;
 extern bool oneShotConnectToAP;
 extern String lastCardData;
 extern String replayBin;
-
-//Hidogeddon Logo
-const extern unsigned char LOGO_OLED[];
-const extern String LOGO_HTML;
+extern int logCount;
 
 }  //namespace hrSettings
 
