@@ -48,7 +48,7 @@ extern bool captureUnknownBitLengths;
 extern bool bleEnabled;
 
 //BLE Settings
-const extern char *bleManufacturerTarget;
+const extern char bleManufacturerTarget[];
 extern uint8_t bleAddrType;
 extern String bleMAC;
 

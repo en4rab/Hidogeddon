@@ -9,6 +9,7 @@ namespace hrBLE {
 
 void BLEInit(void);
 bool BLEAction(String action);
+bool BLEisConnecting(void);
 bool BLEisConnected(void);
 bool BLEisScanComplete(void);
 static void BLETasks(void *p);

@@ -6,6 +6,7 @@ NimBLEClient *pClient = nullptr;
 NimBLEScan *pScan = nullptr;
 NimBLERemoteCharacteristic *pCharacteristic = nullptr;
 bool bleScanComplete = true;
+bool bleConnecting = false;
 bool bleBusy = false;
 bool bleInitComplete = false;
 uint8_t bleAction = 0;
@@ -34,6 +35,10 @@ bool BLEAction(String action) {
   return true;
 }
 
+bool BLEisConnecting(void) {
+  return bleConnecting;
+}
+
 bool BLEisConnected(void) {
   if (pClient == nullptr) { return false; }
   if (!pClient->isConnected()) { return false; }
@@ -47,9 +52,9 @@ bool BLEisScanComplete(void) {
 class ScanCallbacks : public NimBLEScanCallbacks {
   void onResult(const NimBLEAdvertisedDevice *bleDevice) override {
     if (bleDevice->getName() == hrSettings::bleManufacturerTarget && hrSettings::bleMAC == "") {
-      NimBLEDevice::getScan()->stop();
       hrSettings::bleAddrType = bleDevice->getAddress().getType();
       hrSettings::bleMAC = bleDevice->getAddress().toString().c_str();
+      NimBLEDevice::getScan()->stop();
       pScan->clearResults();
       bleBusy = false;
       bleAction = 2;
@@ -59,11 +64,16 @@ class ScanCallbacks : public NimBLEScanCallbacks {
   void onScanEnd(const NimBLEScanResults &results, int reason) override {
     pScan->clearResults();
     bleBusy = false;
-    bleAction = 4;
+    if (hrSettings::bleMAC == "") {
+      bleAction = 4;
+    } else {
+      bleAction = 2;
+    }
   }
 } scanCallbacks;
 
 static void BLETasks(void *p) {
+  vTaskDelay(pdMS_TO_TICKS(4000));
   NimBLEDevice::init("");
   NimBLEDevice::setPower(9);
   pClient = NimBLEDevice::createClient();
@@ -110,7 +120,7 @@ static void BLETasks(void *p) {
   }
 }
 
-void BLESearch(void) {
+static void BLESearch(void) {
   if (pClient == nullptr) { return; }
   if (bleBusy) { return; }
   bleBusy = true;
@@ -125,6 +135,7 @@ static void BLEConnect(void) {
   if (hrSettings::bleMAC == "") { return; }
   if (pClient->isConnected()) { return; }
   bleBusy = true;
+  bleConnecting = true;
   pCharacteristic = nullptr;
   NimBLEAddress bleAddress(hrSettings::bleMAC.c_str(), hrSettings::bleAddrType);
   pClient->connect(bleAddress);
@@ -133,6 +144,7 @@ static void BLEConnect(void) {
     if (pService) {
       pCharacteristic = pService->getCharacteristic("6e400002-b5a3-f393-e0a9-e50e24dcca9d");
       if (pCharacteristic != nullptr) {
+        bleConnecting = false;
         bleBusy = false;
         bleAction = 3;
         return;
@@ -140,11 +152,13 @@ static void BLEConnect(void) {
     }
     pClient->disconnect();
   }
+  bleConnecting = false;
   bleBusy = false;
 }
 
 static void BLESendCommand(int cmd) {
   if (pClient == nullptr) { return; }
+  if (pCharacteristic == nullptr) { return; }
   if (!pClient->isConnected()) { return; }
   if (cmd == 0) {
     uint8_t stopCmd[8] = { 220, 0, 5, 21, 1, 0, 20, 1 };

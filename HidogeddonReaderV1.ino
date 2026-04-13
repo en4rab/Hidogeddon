@@ -8,7 +8,7 @@ _   _ ___________ _____ _____  _________________ _____ _   _
 
 Product Name:  Hidogeddon Reader
 Version:       1.1
-Build Date:    2026-04-12
+Build Date:    2026-04-13
 Author:        Daniel Raines [ Dr0pR00t ] [ https://www.linkedin.com/in/danielraines ]
 
 ::CREDITS::
@@ -63,7 +63,6 @@ CHANGE PARTITION SCHEME TO "Huge APP (3MB No OTA/1MB SPIFFS)" UNDER THE TOOLS ME
 #include "hr_ble.h"
 
 void setup() {
-  //Serial.begin(115200);
   hrUtil::SettingsInit();
   hrUtil::GPIOInit();
   hrUtil::OLEDInit();
@@ -77,15 +76,4 @@ void loop() {
   hrUtil::HeartBeat();
   hrUtil::CheckReboot();
   hrCardReader::ParseCard();
-
-  //delay(500);
-  // Serial.print("Total heap size: ");
-  // Serial.println(ESP.getHeapSize());
-  // Serial.print("Available heap: ");
-  // Serial.println(ESP.getFreeHeap());
-  // Serial.print("Lowest level since boot: ");
-  // Serial.println(ESP.getMinFreeHeap());
-  // Serial.print("Max alloc: ");
-  // Serial.println(ESP.getMaxAllocHeap());
-  // Serial.println("");
 }

@@ -257,6 +257,8 @@ void Send(String bitCount) {
   }
 
   SendWiegand();
+
+  
 }
 
 void setup() {

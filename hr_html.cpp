@@ -139,15 +139,15 @@ String VersionAndBuild(void) {
 
 String BLEStatus(void) {
   if (!hrSettings::bleEnabled) { return ""; }
-  bool isConnected = hrBLE::BLEisConnected();
-  if (hrSettings::bleMAC == "") { isConnected = false; }
+  String state = "Disconnected";
+  if (hrBLE::BLEisConnecting()) { state = "Connecting"; }
+  if (hrSettings::bleMAC != "" && hrBLE::BLEisConnected()) { state = "Connected"; }
   String html = "<table width=\"100%\" border=\"0\" cellspacing=\"5\" cellpadding=\"0\"><tr>";
   html += "<td align=\"left\" valign=\"top\"><div class=\"infoPanel\">";
   html += "FitPro BLE Status";
   html += "<br>Device: ";
   html += hrSettings::bleMAC == "" ? "None" : hrSettings::bleMAC;
-  html += "<br>State: ";
-  html += isConnected == true ? "Connected" : "Disconnected";
+  html += "<br>State: " + state;
   html += "<br></div></td></tr></table>";
   return html;
 }

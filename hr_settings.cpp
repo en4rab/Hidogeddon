@@ -4,7 +4,7 @@ namespace hrSettings {
 
 //Product
 const char VERSION_NUMBER[] = "1.1";
-const char BUILD_DATE[] = "2026-04-12";
+const char BUILD_DATE[] = "2026-04-13";
 
 //Debug Mode - ONLY FOR FIRMWARE DEV/TEST -> !!! This should be set to false for normal operation !!!
 const bool SERIAL_CONSOLE_ONLY_DEBUG_MODE = false;  //Writes SaveCardData() in hr_cardreader.cpp to the serial console rather than SPIFFS card_data.txt
@@ -72,7 +72,7 @@ bool bleEnabled = false;
 
 //BLE Settings
 //DO NOT CHANGE THESE
-const char *bleManufacturerTarget = "716";
+const char bleManufacturerTarget[] = "716";
 uint8_t bleAddrType = 0;
 String bleMAC = "";
 

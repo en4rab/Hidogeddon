@@ -13,7 +13,6 @@ void ServerInit(void) {
 }
 
 static void ServerTasks(void* p) {
-  if (hrSettings::bleEnabled) { vTaskDelay(pdMS_TO_TICKS(5000)); }
   bool captivePortalEnabled = hrSettings::allowCaptivePortal;
   if (hrSettings::wifiSSID == "" || hrSettings::wifiPassword == "") { hrSettings::oneShotConnectToAP = false; }
   if (hrSettings::oneShotConnectToAP) { captivePortalEnabled = false; }
