@@ -30,7 +30,7 @@ Hidogeddon is designed to run on the **same hardware as the Paxtogeddon reader**
 ## Getting Started
 
 ### Hardware Requirements
-To use this firmware, you will need a Paxtogeddon OLED hardware board:
+To use this firmware, you will need a Paxtogeddon OLED hardware board:  
 [https://github.com/en4rab/Paxtogeddon-OLED-PCB](https://github.com/en4rab/Paxtogeddon-OLED-PCB)
 
 Or if you prefer a version you can build on protoboard with no OLED there is a variant hosted by my friend 00Waz here on github [https://github.com/00Waz/Hidogeddon](https://github.com/00Waz/Hidogeddon)
