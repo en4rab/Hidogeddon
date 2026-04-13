@@ -5,9 +5,14 @@ Welcome to the **Hidogeddon** repository. This project is a specialised firmware
 ---
 
 ## ⚠️ Important Attribution
-**Credit where credit is due:** Please note that **100% of the firmware and technical development** found in this repository is the work of **Daniel**. 
+**Credit where credit is due:** Please note that **most of the firmware and technical development** found in this repository is the work of **Daniel**. Additional credit to:
 
-I am simply hosting this project on my GitHub to ensure the code has a permanent home and remains accessible. I did not write this code; Daniel deserves all the credit for the reverse engineering, logic, and implementation of Hidogeddon.
+- 0xFFFF and 00Waz: Data Formats  
+- en4rab + "Hungry ghost in a jar": co-author for NimBLE integration  
+- Cardinal_Black: Original BLE lib/commands for FitPro M4/M5/M6  
+- Craigsblackie & Iceman: ASCII art  
+
+I am hosting this project here on GitHub to ensure the code has a permanent home and remains accessible. Daniel deserves all the credit for the reverse engineering, logic, and implementation of Hidogeddon.
 
 ---
 
